@@ -3,8 +3,11 @@
 Generate an OAuth2 token.json for Google Drive access (one-time use).
 
 This script reads `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` from the
-environment, starts an OAuth2 flow (opens your browser), and saves the
-resulting token to `token.json` (or a custom path).
+project `.env` file when available, starts an OAuth2 flow (opens your
+browser), and saves the resulting token to `token.json` (or a custom path).
+
+After the flow completes, it also writes the compact token JSON back to
+`GOOGLE_TOKEN_JSON` inside `.env`.
 
 Scope: https://www.googleapis.com/auth/drive.file
 
@@ -24,6 +27,7 @@ import os
 import sys
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
 from typing import Optional
 
 try:
@@ -34,6 +38,65 @@ except Exception as exc:  # pragma: no cover - dependency may be missing
 
 
 DEFAULT_SCOPE = ["https://www.googleapis.com/auth/drive.file"]
+DEFAULT_ENV_FILE = Path(".env")
+
+
+def load_env_file(env_path: Path) -> dict[str, str]:
+    values: dict[str, str] = {}
+    if not env_path.exists():
+        return values
+
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+        if value and value[0] == value[-1] and value[0] in {'"', "'"}:
+            value = value[1:-1]
+        values[key] = value
+    return values
+
+
+def quote_env_value(value: str) -> str:
+    if "'" not in value:
+        return f"'{value}'"
+    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
+
+
+def upsert_env_value(env_path: Path, key: str, value: str) -> None:
+    lines = env_path.read_text(encoding="utf-8").splitlines() if env_path.exists() else []
+    updated = False
+    new_lines: list[str] = []
+
+    for raw_line in lines:
+        stripped = raw_line.strip()
+        if stripped and not stripped.startswith("#") and "=" in stripped:
+            current_key = stripped.split("=", 1)[0].strip()
+            if current_key == key:
+                new_lines.append(f"{key}={quote_env_value(value)}")
+                updated = True
+                continue
+        new_lines.append(raw_line)
+
+    if not updated:
+        if new_lines and new_lines[-1].strip():
+            new_lines.append("")
+        new_lines.append(f"{key}={quote_env_value(value)}")
+
+    env_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+
+
+def resolve_redirect_uri(env_values: dict[str, str]) -> str:
+    return (
+        env_values.get("REDIRECT_URI")
+        or env_values.get("REDIRECT_URL")
+        or os.environ.get("REDIRECT_URI")
+        or os.environ.get("REDIRECT_URL")
+        or "http://localhost:8000/auth/google/callback"
+    )
 
 
 def parse_port_from_redirect(redirect_uri: str) -> int:
@@ -95,19 +158,23 @@ def wait_for_oauth_callback(host: str, port: int) -> str:
 
 
 def main(argv: Optional[list[str]] = None) -> int:
+
+    env_path = Path(DEFAULT_ENV_FILE)
+    env_values = load_env_file(env_path)
+    default_redirect = resolve_redirect_uri(env_values)
+
     parser = argparse.ArgumentParser(description="Generate Google OAuth2 token.json")
     parser.add_argument("--out", "-o", default="token.json", help="Output token file path")
-    # Accept either REDIRECT_URI or REDIRECT_URL from env for convenience
-    default_redirect = os.environ.get("REDIRECT_URI") or os.environ.get("REDIRECT_URL") or "http://localhost:8000/auth/google/callback"
+    parser.add_argument("--env-file", default=str(DEFAULT_ENV_FILE), help="Path to the .env file to read and update")
     parser.add_argument("--redirect-uri", "-r", default=default_redirect, help="Redirect URI registered in Google Cloud (default: http://localhost:8000/auth/google/callback)")
     parser.add_argument("--no-browser", action="store_true", help="Do not open browser automatically (prints auth URL)")
     args = parser.parse_args(argv)
 
-    client_id = os.environ.get("GOOGLE_CLIENT_ID")
-    client_secret = os.environ.get("GOOGLE_CLIENT_SECRET")
+    client_id = env_values.get("GOOGLE_CLIENT_ID") or os.environ.get("GOOGLE_CLIENT_ID")
+    client_secret = env_values.get("GOOGLE_CLIENT_SECRET") or os.environ.get("GOOGLE_CLIENT_SECRET")
 
     if not client_id or not client_secret:
-        print("Environment variables GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set.")
+        print(f"Missing GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET in {env_path} or environment variables.")
         return 2
 
     # Build client config using the `web` key (matches Web application credentials)
@@ -156,6 +223,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     # Print a one-line version suitable for copying to an env var
     compact = json.dumps(data, separators=(',', ':'))
     print(f"Saved token to {out_path}")
+    upsert_env_value(env_path, "GOOGLE_TOKEN_JSON", compact)
+    print(f"Updated {env_path} with GOOGLE_TOKEN_JSON")
     print("\nOne-line token JSON (copy to GOOGLE_TOKEN_JSON):\n")
     print(compact)
 
