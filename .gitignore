@@ -1,5 +1,7 @@
 specification.md
 oauth2-migration.md
+token.json
+chromadb
 .env
 __pycache__/
 *.pyc

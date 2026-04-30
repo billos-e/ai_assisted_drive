@@ -15,7 +15,9 @@ BASE_DIR = Path(__file__).resolve().parent
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    google_service_account_json: str = Field(alias="GOOGLE_SERVICE_ACCOUNT_JSON")
+    google_client_id: str = Field(alias="GOOGLE_CLIENT_ID")
+    google_client_secret: str = Field(alias="GOOGLE_CLIENT_SECRET")
+    google_token_json: str = Field(alias="GOOGLE_TOKEN_JSON")
     google_drive_root_folder_id: str = Field(alias="GOOGLE_DRIVE_ROOT_FOLDER_ID")
     gemini_api_key: str = Field(alias="GEMINI_API_KEY")
     groq_api_key: str = Field(alias="GROQ_API_KEY")
@@ -47,7 +49,17 @@ class Settings(BaseSettings):
 
     @property
     def service_account_info(self) -> dict[str, Any]:
-        raw = self.google_service_account_json.strip()
+        raise AttributeError("service_account_info is removed. Use google_token_info for OAuth2 migration.")
+
+    @property
+    def google_token_info(self) -> dict[str, Any]:
+        """Parse `GOOGLE_TOKEN_JSON` environment variable into a dict.
+
+        The variable is expected to contain the JSON content of the token file
+        produced by the OAuth2 flow (the same structure returned by
+        `Credentials.to_json()` from `google-auth-oauthlib`).
+        """
+        raw = self.google_token_json.strip()
         while raw and raw[0] in {'"', "'"} and raw[-1] == raw[0]:
             raw = raw[1:-1].strip()
         raw = raw.rstrip("% ").strip()

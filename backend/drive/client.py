@@ -7,7 +7,8 @@ from pathlib import Path
 from typing import Iterator, Literal
 
 from fastapi import UploadFile
-from google.oauth2.service_account import Credentials
+from google.oauth2.credentials import Credentials as OAuthCredentials
+from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
 
@@ -26,10 +27,14 @@ class DriveNode:
 class DriveClient:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
-        credentials = Credentials.from_service_account_info(
-            settings.service_account_info,
-            scopes=["https://www.googleapis.com/auth/drive"],
+        token_info = settings.google_token_info
+        credentials = OAuthCredentials.from_authorized_user_info(
+            token_info,
+            scopes=["https://www.googleapis.com/auth/drive.file"],
         )
+        # Ensure credentials are valid / refreshed before use
+        if not credentials.valid and credentials.refresh_token:
+            credentials.refresh(Request())
         self._service = build("drive", "v3", credentials=credentials, cache_discovery=False)
 
     def list_folder(self, folder_id: str | None = None) -> list[DriveNode]:

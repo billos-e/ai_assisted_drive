@@ -16,3 +16,4 @@ openpyxl
 pytesseract
 Pillow
 requests
+google-auth-oauthlib
