@@ -34,7 +34,7 @@ class Settings(BaseSettings):
         return str(path)
 
     chroma_collection_name: str = "drive_repository"
-    embedding_model: str = "models/text-embedding-004"
+    embedding_model: str = "gemini-embedding-2"
     groq_chat_model: str = "llama-3.3-70b-versatile"
     groq_whisper_model: str = "whisper-large-v3"
     max_upload_size_mb: int = 100

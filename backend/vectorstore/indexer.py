@@ -56,7 +56,7 @@ class RepositoryIndexer:
         if not chunks:
             return 0
 
-        embeddings = [self._embedder.embed(chunk) for chunk in chunks]
+        embeddings = [self._embedder.embed_document(chunk) for chunk in chunks]
         ids = [f"{file_id}:{chunk_index}" for chunk_index in range(len(chunks))]
         metadatas = [
             {
@@ -87,7 +87,7 @@ class RepositoryIndexer:
         return file_ids
 
     def search(self, query: str, top_k: int) -> list[dict[str, str]]:
-        embedding = self._embedder.embed(query)
+        embedding = self._embedder.embed_query(query)
         result = self._vectorstore.collection.query(
             query_embeddings=[embedding],
             n_results=top_k,
