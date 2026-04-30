@@ -3,42 +3,124 @@
 Courte documentation pour installer, configurer et lancer le backend.
 
 Pré-requis
+
+**Pré-requis**
 - Python 3.10+
 - Git
 
-Installation
-1. Créer et activer un environnement virtuel:
+**Installation**
+1. Créer et activer un environnement virtuel :
 
-   python3 -m venv .venv
-   source .venv/bin/activate
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
 
-2. Installer les dépendances:
+2. Installer les dépendances :
 
-   pip install -r requirements.txt
+```bash
+pip install -r requirements.txt
+```
 
-Configuration
-1. Fournir les variables d'environnement (ou créer un fichier `.env` à la racine):
+**Configuration**
+Créer un fichier `.env` à la racine (ou exporter les variables d'environnement). Exemple minimal :
 
-   GOOGLE_CLIENT_ID
-   GOOGLE_CLIENT_SECRET
-   GOOGLE_TOKEN_JSON    # contenu JSON du token OAuth2 (ou chemin vers le fichier)
-   GOOGLE_DRIVE_ROOT_FOLDER_ID
-   GEMINI_API_KEY
-   GROQ_API_KEY
-   API_BASE_URL         # optionnel, défaut: http://127.0.0.1:8000
-   CHROMA_PATH          # optionnel, chemin vers la base Chroma (ex: data/chromadb)
+```env
+GOOGLE_CLIENT_ID=your-client-id
+GOOGLE_CLIENT_SECRET=your-client-secret
+# Peut contenir le JSON complet du token ou le chemin vers un fichier
+GOOGLE_TOKEN_JSON='{"token":"..."}'
+GOOGLE_DRIVE_ROOT_FOLDER_ID=your-root-folder-id
+GEMINI_API_KEY=your-gemini-key
+GROQ_API_KEY=your-groq-key
+API_BASE_URL=http://127.0.0.1:8000
+# CHROMA_PATH par défaut pointe vers backend/chroma_db
+# CHROMA_PATH=data/chromadb    # si vous avez une base Chroma existante
+```
 
-2. Si vous avez déjà une base Chroma existante dans `data/chromadb`, définissez `CHROMA_PATH` sur ce dossier pour conserver les index.
+Remarques :
+- `GOOGLE_TOKEN_JSON` peut contenir le JSON complet (exporté depuis l'auth OAuth2) ou une chaîne encodée.
+- Pour conserver une base Chroma existante, définissez `CHROMA_PATH` vers `data/chromadb`.
 
-Lancer le backend
-1. Depuis la racine du projet (env virtuel activé):
+**Lancer le backend**
 
-   uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
+```bash
+# depuis la racine du projet (avec l'environnement virtuel activé)
+uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
+```
 
-2. Vérifier l'état:
+Vérifier le health check :
 
-   GET http://127.0.0.1:8000/health
+```bash
+curl http://127.0.0.1:8000/health
+# -> {"status":"ok"}
+```
+
+**Utilitaires**
+- Le script `scripts/generate_token.py` aide à créer/renouveler `token.json` pour l'authentification Google.
+- La configuration est chargée depuis `.env` par `backend/config.py`.
+
+# AI Assisted Drive — Backend
+
+Courte documentation : installer, configurer et lancer le backend.
+
+**Pré-requis**
+- Python 3.10+
+- Git
+
+**Installation**
+1. Créer et activer un environnement virtuel :
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+2. Installer les dépendances :
+
+```bash
+pip install -r requirements.txt
+```
+
+**Configuration**
+Créer un fichier `.env` à la racine (ou exporter les variables d'environnement). Exemple minimal :
+
+```env
+GOOGLE_CLIENT_ID=your-client-id
+GOOGLE_CLIENT_SECRET=your-client-secret
+# Peut contenir le JSON complet du token ou le chemin vers un fichier
+GOOGLE_TOKEN_JSON='{"token":"..."}'
+GOOGLE_DRIVE_ROOT_FOLDER_ID=your-root-folder-id
+GEMINI_API_KEY=your-gemini-key
+GROQ_API_KEY=your-groq-key
+API_BASE_URL=http://127.0.0.1:8000
+# CHROMA_PATH par défaut pointe vers backend/chroma_db
+# CHROMA_PATH=data/chromadb    # si vous avez une base Chroma existante
+```
+
+Remarques :
+- `GOOGLE_TOKEN_JSON` peut contenir le JSON complet (exporté depuis l'auth OAuth2) ou une chaîne encodée.
+- Pour conserver une base Chroma existante, définissez `CHROMA_PATH` vers `data/chromadb`.
+
+**Lancer le backend**
+
+```bash
+# depuis la racine du projet (avec l'environnement virtuel activé)
+uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+Vérifier le health check :
+
+```bash
+curl http://127.0.0.1:8000/health
+# -> {"status":"ok"}
+```
+
+**Utilitaires**
+- Le script `scripts/generate_token.py` aide à créer/renouveler `token.json` pour l'authentification Google.
+- La configuration est chargée depuis `.env` par `backend/config.py`.
+   http://127.0.0.1:8000/docs
 
 Notes
-- Le script `scripts/generate_token.py` peut aider à créer/renouveler `token.json` pour l'authentification Google.
+- Le script `scripts/generate_token.py` va aider à créer/renouveler `token.json` pour l'authentification Google.
 - Le code lit par défaut la configuration depuis un fichier `.env` si présent.
