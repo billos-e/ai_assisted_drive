@@ -1,5 +1,4 @@
-specification.md
-oauth2-migration.md
+*.md
 token.json
 data/chromadb
 .env
