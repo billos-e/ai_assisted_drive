@@ -12,6 +12,7 @@ Pré-requis
 1. Créer et activer un environnement virtuel :
 
 ```bash
+cd backend
 python3 -m venv .venv
 source .venv/bin/activate
 ```
@@ -37,7 +38,7 @@ Remarques :
 
 ```bash
 # depuis la racine du projet (avec l'environnement virtuel activé)
-uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
+uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 Vérifier le health check :
