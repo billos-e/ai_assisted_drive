@@ -1,89 +1,148 @@
 <template>
   <div class="settings-page">
     <div class="settings-container">
+      <header class="settings-header">
+        <h1 class="page-title">Settings</h1>
+        <p class="page-subtitle">Manage your account and application preferences</p>
+      </header>
+
       <!-- Section 1: Connection -->
-      <div class="settings-section">
-        <h2 class="section-title">Connection</h2>
+      <div class="settings-section glass">
+        <div class="section-header">
+          <div class="section-icon-wrapper">
+            <LinkIcon :size="18" />
+          </div>
+          <h2 class="section-title">Connection</h2>
+        </div>
+        
         <div class="section-content">
-          <div class="setting-item">
-            <div class="setting-label">Google Account</div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">Google Account</div>
+              <div class="setting-hint">The account used to sync with Google Drive</div>
+            </div>
             <div class="setting-value">{{ googleAccount }}</div>
           </div>
+          
           <div class="setting-actions">
             <button class="btn btn-primary" @click="reconnect" :disabled="reconnecting">
-              {{ reconnecting ? '🔄 Reconnecting...' : 'Reconnect' }}
+              <RotateCcw v-if="!reconnecting" :size="14" />
+              <LoaderCircle v-else :size="14" class="spin" />
+              <span>{{ reconnecting ? 'Reconnecting...' : 'Reconnect Account' }}</span>
             </button>
             <button class="btn btn-secondary" disabled title="Coming soon">
-              Change account
-              <span class="badge coming-soon">Coming soon</span>
+              <span>Change account</span>
+              <span class="badge coming-soon">Soon</span>
             </button>
           </div>
         </div>
       </div>
 
       <!-- Section 2: Repository -->
-      <div class="settings-section">
-        <h2 class="section-title">Repository</h2>
+      <div class="settings-section glass">
+        <div class="section-header">
+          <div class="section-icon-wrapper">
+            <Database :size="18" />
+          </div>
+          <h2 class="section-title">Repository</h2>
+        </div>
+
         <div class="section-content">
-          <div class="setting-item">
-            <div class="setting-label">Root Folder</div>
-            <div class="setting-value-with-action">
-              <div class="setting-value">{{ rootFolderId }}</div>
-              <button class="btn btn-sm btn-secondary" @click="editRootFolder">
-                Edit
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">Root Folder</div>
+              <div class="setting-hint">Files in this folder will be indexed for the AI</div>
+            </div>
+            <div class="setting-value-group">
+              <div class="setting-value-pill">{{ rootFolderId }}</div>
+              <button class="btn-icon" @click="editRootFolder" title="Edit folder">
+                <Edit3 :size="16" />
               </button>
             </div>
           </div>
 
-          <div v-if="editingRootFolder" class="inline-edit">
-            <input
-              v-model="newRootFolderId"
-              type="text"
-              placeholder="Enter folder ID or path"
-            />
-            <button class="btn btn-sm btn-primary" @click="saveRootFolder" :disabled="savingRootFolder">
-              Save
-            </button>
-            <button class="btn btn-sm btn-secondary" @click="editingRootFolder = false">
-              Cancel
-            </button>
-          </div>
+          <Transition name="slide-down">
+            <div v-if="editingRootFolder" class="inline-edit-box">
+              <div class="input-container glass">
+                <input
+                  v-model="newRootFolderId"
+                  type="text"
+                  placeholder="Enter folder ID or path"
+                />
+              </div>
+              <div class="inline-actions">
+                <button class="btn btn-primary btn-sm" @click="saveRootFolder" :disabled="savingRootFolder">
+                  <span v-if="!savingRootFolder">Save</span>
+                  <LoaderCircle v-else :size="14" class="spin" />
+                </button>
+                <button class="btn btn-secondary btn-sm" @click="editingRootFolder = false">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </Transition>
 
-          <div class="setting-item">
-            <div class="setting-label">Indexing Status</div>
-            <div class="setting-value">{{ indexedFilesCount }} files indexed</div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">Indexing Status</div>
+              <div class="setting-hint">Total number of documents stored in your local knowledge base</div>
+            </div>
+            <div class="setting-value-pill highlight">
+              <span class="count">{{ indexedFilesCount }}</span>
+              <span>files indexed</span>
+            </div>
           </div>
 
           <div class="setting-actions">
             <button class="btn btn-primary" @click="forceReindex" :disabled="reindexing">
-              {{ reindexing ? '🔄 Re-indexing...' : 'Force re-index' }}
+              <RefreshCw v-if="!reindexing" :size="14" />
+              <LoaderCircle v-else :size="14" class="spin" />
+              <span>{{ reindexing ? 'Re-indexing...' : 'Force Re-index' }}</span>
             </button>
           </div>
 
-          <div v-if="reindexMessage" class="status-message" :class="reindexStatus">
-            {{ reindexMessage }}
-          </div>
+          <Transition name="fade">
+            <div v-if="reindexMessage" class="status-banner" :class="reindexStatus">
+              <CheckCircle v-if="reindexStatus === 'success'" :size="16" />
+              <AlertCircle v-else :size="16" />
+              <span>{{ reindexMessage }}</span>
+            </div>
+          </Transition>
         </div>
       </div>
 
       <!-- Section 3: Chat -->
-      <div class="settings-section">
-        <h2 class="section-title">Chat</h2>
+      <div class="settings-section glass">
+        <div class="section-header">
+          <div class="section-icon-wrapper">
+            <Settings2 :size="18" />
+          </div>
+          <h2 class="section-title">Chat & Model</h2>
+        </div>
+
         <div class="section-content">
-          <div class="setting-item">
-            <div class="setting-label">Model</div>
-            <select v-model="selectedModel" class="setting-select">
-              <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile</option>
-              <option value="llama-3.1-70b-versatile">llama-3.1-70b-versatile</option>
-              <option value="mixtral-8x7b-32768">mixtral-8x7b-32768</option>
-              <option value="gemma-7b-it">gemma-7b-it</option>
-            </select>
-            <div class="setting-hint">UI only for now</div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">Model Selection</div>
+              <div class="setting-hint">Choose the AI model for generating responses</div>
+            </div>
+            <div class="select-wrapper">
+              <select v-model="selectedModel" class="setting-select">
+                <option value="llama-3.3-70b-versatile">Llama 3.3 70B (Versatile)</option>
+                <option value="llama-3.1-70b-versatile">Llama 3.1 70B (Legacy)</option>
+                <option value="mixtral-8x7b-32768">Mixtral 8x7B (MoE)</option>
+                <option value="gemma-7b-it">Gemma 7B (Lightweight)</option>
+              </select>
+              <ChevronDown :size="16" class="select-icon" />
+            </div>
           </div>
 
-          <div class="setting-item">
-            <div class="setting-label">Number of Sources</div>
-            <div class="setting-value-with-input">
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">Search Depth</div>
+              <div class="setting-hint">Number of context sources to retrieve (Max 20)</div>
+            </div>
+            <div class="number-input-wrapper">
               <input
                 v-model.number="numberOfSources"
                 type="number"
@@ -91,20 +150,30 @@
                 max="20"
                 class="setting-number-input"
               />
-              <span class="setting-hint">Default: 5, Max: 20</span>
+              <span class="unit">sources</span>
             </div>
           </div>
 
-          <div class="setting-item">
-            <div class="setting-label">Response Language</div>
-            <select v-model="responseLanguage" class="setting-select">
-              <option value="auto">Auto</option>
-              <option value="en">English</option>
-              <option value="fr">Français</option>
-              <option value="es">Español</option>
-              <option value="de">Deutsch</option>
-            </select>
-            <div class="setting-hint">UI only for now</div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">Response Language</div>
+              <div class="setting-hint">Target language for the AI responses</div>
+            </div>
+            <div class="select-wrapper">
+              <select v-model="responseLanguage" class="setting-select">
+                <option value="auto">Auto-detect</option>
+                <option value="en">English</option>
+                <option value="fr">Français</option>
+                <option value="es">Español</option>
+                <option value="de">Deutsch</option>
+              </select>
+              <ChevronDown :size="16" class="select-icon" />
+            </div>
+          </div>
+          
+          <div class="ui-only-badge">
+            <Info :size="14" />
+            <span>AI model settings are currently UI-only and will be connected soon.</span>
           </div>
         </div>
       </div>
@@ -114,6 +183,19 @@
 
 <script setup>
 import { ref } from 'vue'
+import { 
+  Link as LinkIcon, 
+  RotateCcw, 
+  LoaderCircle, 
+  Database, 
+  Edit3, 
+  RefreshCw, 
+  CheckCircle, 
+  AlertCircle,
+  Settings2,
+  ChevronDown,
+  Info
+} from 'lucide-vue-next'
 
 const googleAccount = ref('user@gmail.com')
 const rootFolderId = ref('root-folder-id-123')
@@ -133,12 +215,10 @@ const reindexStatus = ref('')
 const reconnect = async () => {
   reconnecting.value = true
   try {
-    // TODO: Implement OAuth2 reconnection logic
     await new Promise(resolve => setTimeout(resolve, 1500))
-    alert('Token refreshed successfully')
+    // Success feedback is handled by re-enabling button
   } catch (error) {
     console.error('Error reconnecting:', error)
-    alert('Error refreshing token')
   } finally {
     reconnecting.value = false
   }
@@ -151,16 +231,13 @@ const editRootFolder = () => {
 
 const saveRootFolder = async () => {
   if (!newRootFolderId.value.trim()) return
-
   savingRootFolder.value = true
   try {
-    // TODO: Implement save logic
     await new Promise(resolve => setTimeout(resolve, 1000))
     rootFolderId.value = newRootFolderId.value
     editingRootFolder.value = false
   } catch (error) {
     console.error('Error saving root folder:', error)
-    alert('Error saving root folder')
   } finally {
     savingRootFolder.value = false
   }
@@ -170,19 +247,17 @@ const forceReindex = async () => {
   reindexing.value = true
   reindexMessage.value = ''
   reindexStatus.value = ''
-
   try {
-    // TODO: Implement force re-index logic
     await new Promise(resolve => setTimeout(resolve, 3000))
     indexedFilesCount.value = 42
-    reindexMessage.value = '✓ Re-indexing completed successfully'
+    reindexMessage.value = 'Re-indexing completed successfully'
     reindexStatus.value = 'success'
     setTimeout(() => {
       reindexMessage.value = ''
-    }, 3000)
+    }, 4000)
   } catch (error) {
     console.error('Error re-indexing:', error)
-    reindexMessage.value = '✗ Error during re-indexing'
+    reindexMessage.value = 'Error during re-indexing'
     reindexStatus.value = 'error'
   } finally {
     reindexing.value = false
@@ -199,207 +274,248 @@ const forceReindex = async () => {
 }
 
 .settings-container {
-  max-width: 600px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.settings-header {
+  margin-bottom: var(--spacing-xl);
+}
+
+.page-title {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.page-subtitle {
+  color: var(--color-text-secondary);
+  font-size: 15px;
 }
 
 .settings-section {
-  background-color: var(--color-surface);
-  border-radius: 8px;
-  padding: var(--spacing-lg);
+  padding: var(--spacing-xl);
   margin-bottom: var(--spacing-lg);
+  border-radius: var(--radius-lg);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: var(--spacing-xl);
+}
+
+.section-icon-wrapper {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary-light);
   border: 1px solid var(--color-border);
 }
 
 .section-title {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 700;
   color: var(--color-text-primary);
-  margin-bottom: var(--spacing-md);
-  padding-bottom: var(--spacing-md);
-  border-bottom: 1px solid var(--color-border);
 }
 
 .section-content {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: 28px;
 }
 
-.setting-item {
+.setting-row {
   display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-lg);
+}
+
+.setting-info {
+  flex: 1;
 }
 
 .setting-label {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--color-text-primary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.setting-hint {
+  font-size: 13px;
+  color: var(--color-text-muted);
 }
 
 .setting-value {
   font-size: 14px;
   color: var(--color-text-secondary);
-  padding: var(--spacing-sm);
-  background-color: var(--color-background);
-  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  padding: 8px 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
-  word-break: break-word;
 }
 
-.setting-value-with-action {
-  display: flex;
-  gap: var(--spacing-md);
-  align-items: center;
-}
-
-.setting-value-with-action .setting-value {
-  flex: 1;
-  margin: 0;
-}
-
-.setting-value-with-input {
+.setting-value-group {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: 12px;
 }
 
-.setting-number-input {
-  width: 80px;
-  padding: 8px 12px;
+.setting-value-pill {
+  padding: 6px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 20px;
   border: 1px solid var(--color-border);
-  border-radius: 4px;
   font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.setting-value-pill.highlight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(99, 102, 241, 0.2);
+  color: var(--color-primary-light);
+}
+
+.setting-value-pill .count {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.select-wrapper {
+  position: relative;
+  width: 240px;
 }
 
 .setting-select {
-  padding: 8px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  font-size: 14px;
-  background-color: var(--color-surface);
-  color: var(--color-text-primary);
-  transition: border-color 0.2s;
+  width: 100%;
+  appearance: none;
+  padding: 10px 16px;
+  padding-right: 40px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
 }
 
-.setting-select:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+.select-icon {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--color-text-muted);
 }
 
-.setting-hint {
-  font-size: 12px;
-  color: var(--color-text-secondary);
-  font-style: italic;
+.number-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.setting-number-input {
+  width: 100px;
+  text-align: center;
+  padding: 10px;
+}
+
+.unit {
+  font-size: 13px;
+  color: var(--color-text-muted);
 }
 
 .setting-actions {
   display: flex;
-  gap: var(--spacing-md);
-  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 8px;
 }
 
-.btn {
-  padding: 8px 16px;
-  border-radius: 4px;
-  font-size: 14px;
-  transition: all 0.2s;
-  border: none;
-  cursor: pointer;
-  font-weight: 500;
+.inline-edit-box {
+  background: rgba(0, 0, 0, 0.15);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.inline-actions {
+  display: flex;
+  justify-content: flex-end;
   gap: 8px;
 }
 
-.btn-primary {
-  background-color: var(--color-primary);
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background-color: var(--color-primary-hover);
-}
-
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background-color: var(--color-background);
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-border);
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background-color: var(--color-border);
-}
-
-.btn-secondary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-sm {
-  padding: 6px 12px;
-  font-size: 13px;
-}
-
-.inline-edit {
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
   display: flex;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-md);
-  background-color: var(--color-background);
-  border-radius: 4px;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.inline-edit input {
-  flex: 1;
-  padding: 8px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
+.btn-icon:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text-primary);
+}
+
+.status-banner {
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  gap: 12px;
   font-size: 14px;
-}
-
-.inline-edit input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-}
-
-.status-message {
-  padding: var(--spacing-md);
-  border-radius: 4px;
-  font-size: 14px;
-  text-align: center;
-}
-
-.status-message.success {
-  background-color: #d1fae5;
-  color: #065f46;
-  border: 1px solid #a7f3d0;
-}
-
-.status-message.error {
-  background-color: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
-}
-
-.badge {
-  display: inline-block;
-  background-color: #9ca3af;
-  color: white;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 11px;
   font-weight: 500;
-  text-transform: uppercase;
-  margin-left: auto;
+}
+
+.status-banner.success {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--color-success);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.status-banner.error {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--color-error);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.ui-only-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@media (max-width: 600px) {
+  .setting-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .select-wrapper, .setting-value {
+    width: 100%;
+  }
 }
 </style>

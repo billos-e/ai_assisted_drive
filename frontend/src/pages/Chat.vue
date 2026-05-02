@@ -1,28 +1,40 @@
 <template>
   <div class="chat-page">
     <!-- Warning banner -->
-    <div v-if="!hasIndexedFiles" class="warning-banner">
-      <CircleAlert :size="16" />
-      <span>No files indexed yet — go to the Repository to upload files</span>
-    </div>
+    <Transition name="slide-down">
+      <div v-if="!hasIndexedFiles" class="warning-banner">
+        <CircleAlert :size="16" />
+        <span>No files indexed yet — go to the Repository to upload files</span>
+      </div>
+    </Transition>
 
     <!-- Messages area -->
     <div class="messages-container" ref="messagesContainer">
       <!-- Empty state -->
       <div v-if="messages.length === 0" class="empty-chat-state">
-        <div class="welcome-message">
-          <h2>Ask anything about your files</h2>
-          <p>Upload documents in the Repository to get started</p>
+        <div class="welcome-container glass">
+          <div class="welcome-icon">
+            <Sparkles :size="32" />
+          </div>
+          <div class="welcome-message">
+            <h2>Ask your AI Drive</h2>
+            <p>Summarize documents, extract insights, or find information across all your uploaded files.</p>
+          </div>
         </div>
-        <div class="example-chips">
-          <button
-            v-for="(example, index) in exampleQuestions"
-            :key="index"
-            class="chip"
-            @click="sendMessage(example)"
-          >
-            {{ example }}
-          </button>
+        
+        <div class="suggestions-container">
+          <p class="suggestions-title">Try asking...</p>
+          <div class="example-chips">
+            <button
+              v-for="(example, index) in exampleQuestions"
+              :key="index"
+              class="chip glass"
+              @click="sendMessage(example)"
+            >
+              <MessageSquare :size="14" />
+              <span>{{ example }}</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -31,26 +43,47 @@
         <div
           v-for="(message, index) in messages"
           :key="index"
-          class="message"
+          class="message-wrapper"
           :class="message.role"
         >
-          <div class="message-bubble">
-            <div class="message-content markdown-content" v-html="formatMessageContent(message.content)"></div>
-            <div v-if="message.sources && message.sources.length > 0" class="message-sources">
-              <div class="sources-header">Sources:</div>
-              <ul class="sources-list">
-                <li v-for="(source, idx) in message.sources" :key="`${source.source_path}-${source.chunk_index}-${idx}`" class="source-item">
-                  <span class="source-path" :title="source.source_path">{{ source.source_path }}</span>
-                  <span v-if="source.distance" class="source-distance">({{ (parseFloat(source.distance).toFixed(3)) }})</span>
-                </li>
-              </ul>
+          <div class="avatar-small" :class="message.role">
+            <User v-if="message.role === 'user'" :size="14" />
+            <Sparkles v-else :size="14" />
+          </div>
+          
+          <div class="message-bubble-container">
+            <div class="message-bubble">
+              <div class="message-content markdown-content" v-html="formatMessageContent(message.content)"></div>
+              
+              <div v-if="message.sources && message.sources.length > 0" class="message-sources-inline">
+                <div class="source-tooltip-container">
+                  <button class="source-icon-btn" title="View sources">
+                    <LinkIcon :size="14" />
+                  </button>
+                  <div class="source-tooltip glass">
+                    <div class="tooltip-header">Sources</div>
+                    <div 
+                      v-for="(source, idx) in message.sources" 
+                      :key="`${source.source_path}-${idx}`" 
+                      class="tooltip-item"
+                      @click="openSource(source.source_path)"
+                    >
+                      <FileText :size="12" />
+                      <span>{{ truncatePath(source.source_path) }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- Thinking indicator -->
-        <div v-if="isWaiting" class="message assistant">
-          <div class="thinking-indicator">
+        <div v-if="isWaiting" class="message-wrapper assistant">
+          <div class="avatar-small assistant">
+            <Sparkles :size="14" />
+          </div>
+          <div class="thinking-bubble">
             <span class="dot"></span>
             <span class="dot"></span>
             <span class="dot"></span>
@@ -60,52 +93,62 @@
     </div>
 
     <!-- Input area -->
-    <div class="input-area">
+    <div class="input-area glass">
       <div class="input-wrapper">
-        <input
-          v-model="inputMessage"
-          type="text"
-          placeholder="Type your question..."
-          @keyup.enter="sendMessage(inputMessage)"
-          :disabled="isWaiting || !hasIndexedFiles"
-        />
-        <button
-          class="btn btn-primary"
-          @click="sendMessage(inputMessage)"
-          :disabled="!inputMessage.trim() || isWaiting || !hasIndexedFiles"
-        >
-          Send
-        </button>
-        <button
-          v-if="messages.length > 0"
-          class="btn btn-secondary"
-          @click="clearConversation"
-          :disabled="isWaiting"
-        >
-          <Trash2 :size="16" />
-          <span>Clear</span>
-        </button>
+        <div class="input-container glass">
+          <input
+            v-model="inputMessage"
+            type="text"
+            placeholder="Ask a question about your files..."
+            @keyup.enter="sendMessage(inputMessage)"
+            :disabled="isWaiting || !hasIndexedFiles"
+          />
+          <div class="input-actions">
+            <button
+              v-if="messages.length > 0"
+              class="action-icon-btn"
+              @click="clearConversation"
+              :disabled="isWaiting"
+              title="Clear conversation"
+            >
+              <RotateCcw :size="18" />
+            </button>
+            <button
+              class="send-btn"
+              :class="{ active: inputMessage.trim() && !isWaiting }"
+              @click="sendMessage(inputMessage)"
+              :disabled="!inputMessage.trim() || isWaiting || !hasIndexedFiles"
+            >
+              <Send :size="18" />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- Clear confirmation modal -->
-    <div v-if="showClearConfirm" class="modal-overlay" @click="showClearConfirm = false">
-      <div class="modal" @click.stop>
-        <h3>Clear conversation?</h3>
-        <p>This action cannot be undone.</p>
-        <div class="modal-actions">
-          <button class="btn btn-primary" @click="confirmClear">Yes, clear</button>
-          <button class="btn btn-secondary" @click="showClearConfirm = false">Cancel</button>
+    <Transition name="fade">
+      <div v-if="showClearConfirm" class="modal-overlay" @click="showClearConfirm = false">
+        <div class="modal glass" @click.stop>
+          <div class="modal-icon warning">
+            <Trash2 :size="24" />
+          </div>
+          <h3>Clear conversation?</h3>
+          <p>This will permanently delete the current chat history. This action cannot be undone.</p>
+          <div class="modal-actions">
+            <button class="btn btn-secondary" @click="showClearConfirm = false">Cancel</button>
+            <button class="btn btn-primary danger" @click="confirmClear">Clear Chat</button>
+          </div>
         </div>
       </div>
-    </div>
+    </Transition>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, nextTick, onMounted } from 'vue'
-import { CircleAlert, Trash2 } from 'lucide-vue-next'
-import { chatAPI } from '../services/api'
+import { CircleAlert, Trash2, Sparkles, Send, User, BookOpen, FileText, RotateCcw, MessageSquare, Link as LinkIcon } from 'lucide-vue-next'
+import { chatAPI, driveAPI } from '../services/api'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 
@@ -135,10 +178,32 @@ const formatMessageContent = (content = '') => {
   return DOMPurify.sanitize(renderedHtml)
 }
 
+const truncatePath = (path) => {
+  if (!path) return ''
+  const parts = path.split('/')
+  return parts[parts.length - 1]
+}
+
 const scrollToBottom = async () => {
   await nextTick()
   if (messagesContainer.value) {
-    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+    messagesContainer.value.scrollTo({
+      top: messagesContainer.value.scrollHeight,
+      behavior: 'smooth'
+    })
+  }
+}
+
+const openSource = async (path) => {
+  try {
+    // Attempt to open the file based on the path/name. 
+    // Usually driveAPI.openFile expects an ID, but we only have path here.
+    // If we only have path, we might need a different API or just show it.
+    // Assuming driveAPI has a method or we alert for now.
+    console.log("Opening source:", path)
+    // Placeholder for actual file open logic since we don't have the ID
+  } catch (error) {
+    console.error('Error opening source:', error)
   }
 }
 
@@ -165,7 +230,6 @@ const loadChatHistory = () => {
     const stored = localStorage.getItem(CHAT_HISTORY_KEY)
     if (stored) {
       const historyData = JSON.parse(stored)
-      // Only load if version matches
       if (historyData.version === 1) {
         messages.value = (historyData.messages || []).map(m => ({
           role: m.role,
@@ -186,7 +250,6 @@ const sendMessage = async (message = null) => {
 
   const timestamp = new Date().toISOString()
 
-  // Add user message
   messages.value.push({
     role: 'user',
     content: text,
@@ -210,12 +273,11 @@ const sendMessage = async (message = null) => {
   try {
     let assistantMessage = ''
 
-    // Stream response - now returns {text, sources}
     const result = await chatAPI.streamChat(
       text,
       messages.value
         .filter(m => m.role !== 'assistant' || m.content.length > 0)
-        .slice(0, -1) // Exclude the current empty assistant message
+        .slice(0, -1)
         .map(m => ({ role: m.role, content: m.content })),
       currentTopK.value,
       (chunk) => {
@@ -225,7 +287,6 @@ const sendMessage = async (message = null) => {
       }
     )
 
-    // Update assistant message with final content and sources
     const assistantIndex = messages.value.length - 1
     messages.value[assistantIndex].content = result.text || assistantMessage
     messages.value[assistantIndex].sources = result.sources || []
@@ -267,34 +328,32 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   width: 100%;
-  min-width: 0;
   height: 100%;
   overflow: hidden;
-  align-self: stretch;
+  background-color: var(--color-background);
 }
 
 .warning-banner {
-  padding: var(--spacing-md) var(--spacing-lg);
-  background-color: #fef3c7;
-  color: #92400e;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background-color: rgba(245, 158, 11, 0.1);
+  color: var(--color-warning);
   font-size: 13px;
   font-weight: 500;
-  border-bottom: 1px solid #fcd34d;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.2);
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
 }
 
 .messages-container {
   flex: 1;
   overflow-y: auto;
-  padding: var(--spacing-lg);
+  padding: var(--spacing-xl) var(--spacing-lg);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
-  background-color: var(--color-background);
+  gap: 24px;
   width: 100%;
-  min-width: 0;
 }
 
 .empty-chat-state {
@@ -303,362 +362,426 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   height: 100%;
-  gap: var(--spacing-lg);
+  gap: 40px;
+  max-width: 600px;
+  margin: 0 auto;
 }
 
-.welcome-message {
+.welcome-container {
+  padding: 40px;
+  border-radius: var(--radius-lg);
   text-align: center;
-  color: var(--color-text-secondary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-lg);
+  width: 100%;
+}
+
+.welcome-icon {
+  width: 64px;
+  height: 64px;
+  background: var(--color-primary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
 }
 
 .welcome-message h2 {
-  font-size: 24px;
-  margin-bottom: var(--spacing-sm);
-  color: var(--color-text-primary);
+  font-size: 28px;
+  margin-bottom: 12px;
 }
 
 .welcome-message p {
-  font-size: 14px;
+  color: var(--color-text-secondary);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.suggestions-container {
+  width: 100%;
+}
+
+.suggestions-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 16px;
+  text-align: center;
 }
 
 .example-chips {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-  width: 100%;
-  max-width: 300px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
 }
 
 .chip {
-  padding: var(--spacing-md);
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 20px;
+  padding: 14px 20px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   transition: all 0.2s;
   font-size: 14px;
   color: var(--color-text-primary);
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .chip:hover {
-  border-color: var(--color-primary);
-  background-color: var(--color-primary);
-  color: white;
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--color-primary-light);
+  transform: translateY(-2px);
 }
 
-.message {
+.message-wrapper {
   display: flex;
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-md);
+  gap: 16px;
+  max-width: 800px;
+  width: 100%;
+  align-self: center;
 }
 
-.message.user {
-  justify-content: flex-end;
+.message-wrapper.user {
+  flex-direction: row-reverse;
 }
 
-.message.assistant {
-  justify-content: flex-start;
-}
-
-.message-bubble {
-  max-width: 70%;
-  padding: var(--spacing-md);
-  border-radius: 8px;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  min-width: 0;
-}
-
-.message.user .message-bubble {
-  background-color: var(--color-primary);
-  color: white;
-}
-
-.message.assistant .message-bubble {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-primary);
-}
-
-.message-content {
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.message-content :deep(p) {
-  margin: 0 0 var(--spacing-sm) 0;
-}
-
-.message-content :deep(p:last-child) {
-  margin-bottom: 0;
-}
-
-.message-content :deep(ul),
-.message-content :deep(ol) {
-  margin: 0 0 var(--spacing-sm) 1.25rem;
-}
-
-.message-content :deep(li + li) {
+.avatar-small {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   margin-top: 4px;
 }
 
-.message-content :deep(a) {
-  color: inherit;
-  text-decoration: underline;
+.avatar-small.user {
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
 }
 
-.message-content :deep(pre) {
-  background: rgba(0, 0, 0, 0.08);
-  padding: var(--spacing-sm);
-  border-radius: 6px;
-  overflow-x: auto;
-  margin: var(--spacing-sm) 0;
+.avatar-small.assistant {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-primary);
 }
 
-.message-content :deep(code) {
-  font-family: 'Monaco', 'Courier New', monospace;
-  font-size: 12px;
-  background: rgba(0, 0, 0, 0.08);
-  border-radius: 4px;
-  padding: 2px 4px;
-}
-
-.message-content :deep(pre code) {
-  background: transparent;
-  padding: 0;
-}
-
-.message-content :deep(blockquote) {
-  border-left: 3px solid rgba(0, 0, 0, 0.2);
-  padding-left: var(--spacing-sm);
-  margin: var(--spacing-sm) 0;
-  opacity: 0.9;
-}
-
-.message.user .message-content :deep(pre),
-.message.user .message-content :deep(code) {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.message.user .message-content :deep(blockquote) {
-  border-left-color: rgba(255, 255, 255, 0.5);
-}
-
-.message-sources {
-  font-size: 12px;
-  color: var(--color-text-secondary);
-  margin-top: var(--spacing-sm);
-  padding-top: var(--spacing-sm);
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-.message.user .message-sources {
-  border-top-color: rgba(255, 255, 255, 0.2);
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.sources-header {
-  font-weight: 600;
-  margin-bottom: 6px;
-  display: block;
-}
-
-.sources-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+.message-bubble-container {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
 }
 
-.source-item {
+.user .message-bubble-container {
+  align-items: flex-end;
+}
+
+.message-bubble {
+  padding: 16px 20px;
+  border-radius: var(--radius-lg);
+  font-size: 15px;
+  line-height: 1.6;
+  position: relative;
+  max-width: 100%;
+}
+
+.user .message-bubble {
+  background: #f3f4f6;
+  color: var(--color-text-primary);
+  border-bottom-right-radius: 4px;
+}
+
+.assistant .message-bubble {
+  background: transparent;
+  color: var(--color-text-primary);
+}
+
+.message-content :deep(p) { margin-bottom: 12px; }
+.message-content :deep(p:last-child) { margin-bottom: 0; }
+.message-content :deep(pre) {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 12px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 12px 0;
+}
+.message-content :deep(code) {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  background: rgba(0, 0, 0, 0.1);
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+.user .message-content :deep(code) { background: rgba(255, 255, 255, 0.1); }
+
+.message-sources-inline {
+  display: flex;
+  margin-top: 8px;
+  justify-content: flex-start;
+}
+
+.source-tooltip-container {
+  position: relative;
+  display: inline-flex;
+}
+
+.source-icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  padding: 4px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.source-icon-btn:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-primary);
+}
+
+.source-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 8px;
+  min-width: 200px;
+  box-shadow: var(--shadow-lg);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(4px);
+  transition: all 0.2s;
+  z-index: 50;
+}
+
+.source-tooltip-container:hover .source-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.tooltip-header {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  padding: 0 4px;
+}
+
+.tooltip-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px;
-  border-radius: 3px;
-  transition: background-color 0.2s;
-  cursor: pointer;
-}
-
-.source-item:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-}
-
-.message.user .source-item:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.source-path {
-  font-family: 'Monaco', 'Courier New', monospace;
-  font-size: 11px;
-  word-break: break-all;
-  flex: 1;
-  min-width: 0;
-}
-
-.source-distance {
-  font-size: 10px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
   color: var(--color-text-secondary);
-  opacity: 0.7;
-  flex-shrink: 0;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.thinking-indicator {
+.tooltip-item:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+.thinking-bubble {
+  padding: 12px 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  border-bottom-left-radius: 4px;
   display: flex;
-  gap: 4px;
+  gap: 6px;
   align-items: center;
-  height: 20px;
 }
 
 .dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background-color: var(--color-primary);
+  background-color: var(--color-primary-light);
   animation: bounce 1.4s infinite;
 }
 
-.dot:nth-child(1) {
-  animation-delay: -0.32s;
-}
-
-.dot:nth-child(2) {
-  animation-delay: -0.16s;
-}
+.dot:nth-child(1) { animation-delay: -0.32s; }
+.dot:nth-child(2) { animation-delay: -0.16s; }
 
 @keyframes bounce {
-  0%, 80%, 100% {
-    opacity: 0.3;
-    transform: translateY(0);
-  }
-  40% {
-    opacity: 1;
-    transform: translateY(-6px);
-  }
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.3; }
+  40% { transform: translateY(-4px); opacity: 1; }
 }
 
 .input-area {
   padding: var(--spacing-lg);
   border-top: 1px solid var(--color-border);
-  background-color: var(--color-surface);
   flex-shrink: 0;
-  width: 100%;
+  z-index: 10;
 }
 
 .input-wrapper {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.input-container {
   display: flex;
-  gap: var(--spacing-md);
-  max-width: 100%;
-  width: 100%;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px 8px 20px;
+  border-radius: var(--radius-lg);
 }
 
-.input-wrapper input {
+.input-container input {
   flex: 1;
-  padding: 10px var(--spacing-md);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  font-size: 14px;
-  transition: border-color 0.2s;
-}
-
-.input-wrapper input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-}
-
-.input-wrapper input:disabled {
-  background-color: var(--color-background);
-  color: var(--color-text-secondary);
-  cursor: not-allowed;
-}
-
-.btn {
-  padding: 10px 16px;
-  border-radius: 4px;
-  font-size: 14px;
-  transition: all 0.2s;
+  background: transparent;
   border: none;
-  cursor: pointer;
-  font-weight: 500;
-  white-space: nowrap;
-  display: inline-flex;
+  font-size: 15px;
+  color: var(--color-text-primary);
+  padding: 8px 0;
+}
+
+.input-container input:focus { box-shadow: none; }
+
+.input-actions {
+  display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.btn-primary {
-  background-color: var(--color-primary);
-  color: white;
+.action-icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.btn-primary:hover:not(:disabled) {
-  background-color: var(--color-primary-hover);
-}
-
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background-color: var(--color-background);
+.action-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
   color: var(--color-text-primary);
-  border: 1px solid var(--color-border);
 }
 
-.btn-secondary:hover:not(:disabled) {
-  background-color: var(--color-border);
+.send-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface-hover);
+  color: var(--color-text-muted);
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.send-btn.active {
+  background: var(--color-primary);
+  color: white;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+}
+
+.send-btn.active:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+}
+
+/* Modal */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 100;
+  padding: 20px;
 }
 
 .modal {
-  background-color: var(--color-surface);
-  border-radius: 8px;
-  padding: var(--spacing-lg);
   max-width: 400px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  padding: 32px;
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.modal-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.modal-icon.warning {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--color-error);
 }
 
 .modal h3 {
-  font-size: 18px;
-  margin-bottom: var(--spacing-sm);
-  color: var(--color-text-primary);
+  font-size: 20px;
+  margin-bottom: 12px;
 }
 
 .modal p {
-  font-size: 14px;
   color: var(--color-text-secondary);
-  margin-bottom: var(--spacing-lg);
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 24px;
 }
 
 .modal-actions {
   display: flex;
-  gap: var(--spacing-md);
+  gap: 12px;
 }
 
 .modal-actions .btn {
   flex: 1;
 }
 
-@media (max-width: 900px) {
-  .input-wrapper {
-    flex-direction: column;
-  }
+.btn.danger {
+  background: var(--color-error);
+  color: white;
+}
 
-  .message-bubble {
-    max-width: 100%;
-  }
+/* Transitions */
+.slide-down-enter-active, .slide-down-leave-active { transition: all 0.3s ease; }
+.slide-down-enter-from, .slide-down-leave-to { transform: translateY(-20px); opacity: 0; }
+
+.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+@media (max-width: 768px) {
+  .message-bubble { max-width: 90%; }
+  .welcome-container { padding: 24px; }
+  .welcome-message h2 { font-size: 22px; }
 }
 </style>

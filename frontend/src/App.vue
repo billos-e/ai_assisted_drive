@@ -1,13 +1,16 @@
 <template>
   <div class="app-container">
+    <div class="bg-mesh"></div>
     <Sidebar 
       :activeSection="activeSection"
       @navigate="handleNavigation"
     />
     <main class="main-content">
-      <Repository v-if="activeSection === 'repository'" />
-      <Chat v-else-if="activeSection === 'chat'" />
-      <Settings v-else-if="activeSection === 'settings'" />
+      <Transition name="page" mode="out-in">
+        <Repository v-if="activeSection === 'repository'" :key="'repo'" />
+        <Chat v-else-if="activeSection === 'chat'" :key="'chat'" />
+        <Settings v-else-if="activeSection === 'settings'" :key="'settings'" />
+      </Transition>
     </main>
   </div>
 </template>
@@ -30,20 +33,48 @@ const handleNavigation = (section) => {
 .app-container {
   display: flex;
   width: 100vw;
-  min-height: 100vh;
+  height: 100vh;
   background-color: var(--color-background);
   overflow: hidden;
+  position: relative;
+}
+
+.bg-mesh {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.4;
+  background: 
+    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.15) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(16, 185, 129, 0.05) 0px, transparent 50%);
+  filter: blur(80px);
+  pointer-events: none;
 }
 
 .main-content {
-  flex: 1 1 auto;
-  width: 0;
-  min-width: 0;
-  min-height: 0;
+  flex: 1;
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background-color: var(--color-background);
+}
+
+/* Page Transitions */
+.page-enter-active,
+.page-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
 }
 
 @media (max-width: 900px) {
