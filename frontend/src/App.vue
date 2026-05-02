@@ -29,15 +29,30 @@ const handleNavigation = (section) => {
 <style scoped>
 .app-container {
   display: flex;
-  height: 100vh;
+  width: 100vw;
+  min-height: 100vh;
   background-color: var(--color-background);
+  overflow: hidden;
 }
 
 .main-content {
-  flex: 1;
+  flex: 1 1 auto;
+  width: 0;
+  min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   background-color: var(--color-background);
+}
+
+@media (max-width: 900px) {
+  .app-container {
+    flex-direction: column;
+  }
+
+  .main-content {
+    width: 100%;
+  }
 }
 </style>

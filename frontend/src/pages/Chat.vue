@@ -2,7 +2,8 @@
   <div class="chat-page">
     <!-- Warning banner -->
     <div v-if="!hasIndexedFiles" class="warning-banner">
-      ⚠️ No files indexed yet — go to the Repository to upload files
+      <CircleAlert :size="16" />
+      <span>No files indexed yet — go to the Repository to upload files</span>
     </div>
 
     <!-- Messages area -->
@@ -43,12 +44,10 @@
 
         <!-- Thinking indicator -->
         <div v-if="isWaiting" class="message assistant">
-          <div class="message-bubble">
-            <div class="thinking-indicator">
-              <span class="dot"></span>
-              <span class="dot"></span>
-              <span class="dot"></span>
-            </div>
+          <div class="thinking-indicator">
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
           </div>
         </div>
       </template>
@@ -77,7 +76,8 @@
           @click="clearConversation"
           :disabled="isWaiting"
         >
-          🗑️ Clear
+          <Trash2 :size="16" />
+          <span>Clear</span>
         </button>
       </div>
     </div>
@@ -98,6 +98,7 @@
 
 <script setup>
 import { ref, computed, nextTick, onMounted } from 'vue'
+import { CircleAlert, Trash2 } from 'lucide-vue-next'
 import { chatAPI } from '../services/api'
 
 const messages = ref([])
@@ -122,8 +123,6 @@ const scrollToBottom = async () => {
 }
 
 const sendMessage = async (message = null) => {
-  console.log(message);
-  
   const text = message || inputMessage.value.trim()
   if (!text || isWaiting.value) return
 
@@ -131,6 +130,12 @@ const sendMessage = async (message = null) => {
   messages.value.push({
     role: 'user',
     content: text,
+    sources: []
+  })
+
+  messages.value.push({
+    role: 'assistant',
+    content: '',
     sources: []
   })
 
@@ -145,35 +150,23 @@ const sendMessage = async (message = null) => {
     // Stream response
     await chatAPI.streamChat(
       text,
-      messages.value.map(m => ({ role: m.role, content: m.content })),
+      messages.value
+        .filter(m => m.role !== 'assistant' || m.content.length > 0)
+        .map(m => ({ role: m.role, content: m.content })),
       currentTopK.value,
       (chunk) => {
         assistantMessage += chunk
-        // Update the last message in real-time
-        if (messages.value.length > 0 && messages.value[messages.value.length - 1].role === 'assistant') {
-          messages.value[messages.value.length - 1].content = assistantMessage
-        }
+        messages.value[messages.value.length - 1].content = assistantMessage
         scrollToBottom()
       }
     )
 
-    // Add assistant message if not already added
-    if (messages.value.length === 0 || messages.value[messages.value.length - 1].role !== 'assistant') {
-      messages.value.push({
-        role: 'assistant',
-        content: assistantMessage,
-        sources: [] // TODO: Extract actual sources from response
-      })
-    }
+    messages.value[messages.value.length - 1].content = assistantMessage
 
     await scrollToBottom()
   } catch (error) {
     console.error('Error sending message:', error)
-    messages.value.push({
-      role: 'assistant',
-      content: 'Sorry, there was an error processing your request. Please try again.',
-      sources: []
-    })
+    messages.value[messages.value.length - 1].content = 'Sorry, there was an error processing your request. Please try again.'
   } finally {
     isWaiting.value = false
   }
@@ -198,8 +191,11 @@ onMounted(() => {
 .chat-page {
   display: flex;
   flex-direction: column;
+  width: 100%;
+  min-width: 0;
   height: 100%;
   overflow: hidden;
+  align-self: stretch;
 }
 
 .warning-banner {
@@ -209,6 +205,9 @@ onMounted(() => {
   font-size: 13px;
   font-weight: 500;
   border-bottom: 1px solid #fcd34d;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .messages-container {
@@ -219,6 +218,8 @@ onMounted(() => {
   flex-direction: column;
   gap: var(--spacing-md);
   background-color: var(--color-background);
+  width: 100%;
+  min-width: 0;
 }
 
 .empty-chat-state {
@@ -290,6 +291,7 @@ onMounted(() => {
   border-radius: 8px;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  min-width: 0;
 }
 
 .message.user .message-bubble {
@@ -358,12 +360,14 @@ onMounted(() => {
   border-top: 1px solid var(--color-border);
   background-color: var(--color-surface);
   flex-shrink: 0;
+  width: 100%;
 }
 
 .input-wrapper {
   display: flex;
   gap: var(--spacing-md);
   max-width: 100%;
+  width: 100%;
 }
 
 .input-wrapper input {
@@ -396,6 +400,9 @@ onMounted(() => {
   cursor: pointer;
   font-weight: 500;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .btn-primary {
@@ -459,5 +466,15 @@ onMounted(() => {
 
 .modal-actions .btn {
   flex: 1;
+}
+
+@media (max-width: 900px) {
+  .input-wrapper {
+    flex-direction: column;
+  }
+
+  .message-bubble {
+    max-width: 100%;
+  }
 }
 </style>

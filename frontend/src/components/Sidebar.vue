@@ -1,7 +1,10 @@
 <template>
   <aside class="sidebar">
     <div class="sidebar-header">
-      <div class="logo">🚀 AI Drive</div>
+      <div class="logo">
+        <Sparkles :size="18" />
+        <span>AI Drive</span>
+      </div>
     </div>
 
     <nav class="sidebar-nav">
@@ -11,7 +14,7 @@
         @click="$emit('navigate', 'repository')"
         title="Repository"
       >
-        <span class="nav-icon">📁</span>
+        <Folder :size="18" class="nav-icon" />
         <span class="nav-label">Repository</span>
       </button>
 
@@ -21,7 +24,7 @@
         @click="$emit('navigate', 'chat')"
         title="Chat"
       >
-        <span class="nav-icon">💬</span>
+        <MessageSquare :size="18" class="nav-icon" />
         <span class="nav-label">Chat</span>
       </button>
 
@@ -31,7 +34,7 @@
         @click="$emit('navigate', 'settings')"
         title="Settings"
       >
-        <span class="nav-icon">⚙️</span>
+        <Settings2 :size="18" class="nav-icon" />
         <span class="nav-label">Settings</span>
       </button>
     </nav>
@@ -39,6 +42,8 @@
 </template>
 
 <script setup>
+import { Folder, MessageSquare, Settings2, Sparkles } from 'lucide-vue-next'
+
 defineProps({
   activeSection: {
     type: String,
@@ -52,6 +57,8 @@ defineEmits(['navigate'])
 <style scoped>
 .sidebar {
   width: 200px;
+  flex: 0 0 200px;
+  min-height: 100vh;
   background-color: var(--color-surface);
   border-right: 1px solid var(--color-border);
   display: flex;
@@ -73,6 +80,10 @@ defineEmits(['navigate'])
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.logo :deep(svg) {
+  flex-shrink: 0;
 }
 
 .sidebar-nav {
@@ -108,11 +119,34 @@ defineEmits(['navigate'])
 }
 
 .nav-icon {
-  font-size: 18px;
+  color: currentColor;
   flex-shrink: 0;
 }
 
 .nav-label {
   flex: 1;
+}
+
+@media (max-width: 900px) {
+  .sidebar {
+    width: 100%;
+    flex: 0 0 auto;
+    min-height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .sidebar-nav {
+    flex-direction: row;
+  }
+
+  .nav-item {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .nav-label {
+    display: none;
+  }
 }
 </style>

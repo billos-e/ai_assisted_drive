@@ -17,21 +17,24 @@
           @click="goToRoot"
           title="Go back to root"
         >
-          ← Back
+          <ArrowLeft :size="16" />
+          <span>Back</span>
         </button>
         <button
           class="btn btn-primary"
           @click="showCreateFolderInput"
           :disabled="creatingFolder"
         >
-          + New Folder
+          <FolderPlus :size="16" />
+          <span>New Folder</span>
         </button>
         <button
           class="btn btn-primary"
           @click="triggerFileUpload"
           :disabled="uploading"
         >
-          📤 Upload File
+          <Upload :size="16" />
+          <span>Upload File</span>
         </button>
         <input
           ref="fileInput"
@@ -59,10 +62,13 @@
     </div>
 
     <!-- Upload progress -->
-    <div v-if="uploadProgress > 0 && uploadProgress < 100" class="upload-progress">
+    <div v-if="uploading" class="upload-progress">
       <div class="progress-info">
         <span>{{ uploadingFileName }}</span>
-        <span class="progress-percent">{{ uploadProgress }}%</span>
+        <span class="progress-percent">
+          <LoaderCircle :size="14" class="progress-spinner" />
+          <span>{{ uploadProgress }}%</span>
+        </span>
       </div>
       <div class="progress-bar">
         <div class="progress-fill" :style="{ width: uploadProgress + '%' }"></div>
@@ -76,7 +82,7 @@
       </div>
 
       <div v-if="!loading && items.length === 0" class="empty-state">
-        <div class="empty-icon">📭</div>
+        <Inbox :size="48" class="empty-icon" />
         <p>This folder is empty</p>
       </div>
 
@@ -88,11 +94,12 @@
           :class="{ 'is-folder': item.type === 'folder' }"
           @click="handleItemClick(item)"
         >
-          <div class="file-icon">{{ getFileIcon(item.mime_type, item.type === 'folder') }}</div>
+          <component :is="getFileIconComponent(item.mime_type, item.type === 'folder')" :size="20" class="file-icon" />
           <div class="file-info">
             <div class="file-name">{{ item.name }}</div>
             <div v-if="indexingFiles.includes(item.id)" class="indexing-badge">
-              ⏳ Indexing…
+              <LoaderCircle :size="12" class="badge-spinner" />
+              <span>Indexing…</span>
             </div>
           </div>
         </div>
@@ -103,8 +110,9 @@
 
 <script setup>
 import { ref, onMounted, watch } from 'vue'
+import { ArrowLeft, FolderPlus, Inbox, LoaderCircle, Upload } from 'lucide-vue-next'
 import { driveAPI } from '../services/api'
-import { getFileIcon } from '../utils/icons'
+import { getFileIconComponent } from '../utils/icons'
 
 const loading = ref(false)
 const uploading = ref(false)
@@ -194,13 +202,11 @@ const handleFileSelect = async (event) => {
         }
       )
 
-      // Mark as indexing
+      // Mark as indexing while the backend extracts and stores vectors.
       indexingFiles.value.push(result.id)
-      
-      // Simulate indexing completion after 2-3 seconds
       setTimeout(() => {
         indexingFiles.value = indexingFiles.value.filter(id => id !== result.id)
-      }, 2000 + Math.random() * 1000)
+      }, 2500)
 
       await loadItems()
     } catch (error) {
@@ -228,8 +234,11 @@ watch(currentFolderId, () => {
 .repository-page {
   display: flex;
   flex-direction: column;
+  width: 100%;
+  min-width: 0;
   height: 100%;
   overflow: hidden;
+  align-self: stretch;
 }
 
 .repository-header {
@@ -275,6 +284,8 @@ watch(currentFolderId, () => {
 .header-actions {
   display: flex;
   gap: var(--spacing-md);
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .btn {
@@ -285,6 +296,9 @@ watch(currentFolderId, () => {
   border: none;
   cursor: pointer;
   font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .btn-primary {
@@ -342,6 +356,9 @@ watch(currentFolderId, () => {
 
 .progress-percent {
   font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .progress-bar {
@@ -362,6 +379,8 @@ watch(currentFolderId, () => {
   flex: 1;
   overflow-y: auto;
   position: relative;
+  width: 100%;
+  min-width: 0;
 }
 
 .file-list {
@@ -369,6 +388,7 @@ watch(currentFolderId, () => {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
+  width: 100%;
 }
 
 .file-item {
@@ -381,6 +401,8 @@ watch(currentFolderId, () => {
   border: 1px solid var(--color-border);
   cursor: pointer;
   transition: all 0.2s;
+  width: 100%;
+  min-width: 0;
 }
 
 .file-item:hover {
@@ -393,7 +415,7 @@ watch(currentFolderId, () => {
 }
 
 .file-icon {
-  font-size: 24px;
+  color: var(--color-primary);
   flex-shrink: 0;
 }
 
@@ -413,6 +435,9 @@ watch(currentFolderId, () => {
   font-size: 12px;
   color: var(--color-text-secondary);
   margin-top: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .empty-state {
@@ -425,8 +450,8 @@ watch(currentFolderId, () => {
 }
 
 .empty-icon {
-  font-size: 48px;
   margin-bottom: var(--spacing-md);
+  color: var(--color-text-secondary);
 }
 
 .empty-state p {
@@ -441,5 +466,29 @@ watch(currentFolderId, () => {
   align-items: center;
   justify-content: center;
   z-index: 10;
+}
+
+.progress-spinner,
+.badge-spinner {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 900px) {
+  .repository-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-md);
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
 }
 </style>
