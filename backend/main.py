@@ -188,7 +188,11 @@ def create_app() -> FastAPI:
             if not file_id:
                 raise HTTPException(status_code=400, detail="file_id cannot be empty")
             services.drive.delete_file(file_id)
-            return DriveDeleteResponse(message=f"File {file_id} successfully deleted", deleted_id=file_id)
+            deleted_chunks = services.indexer.delete_file_chunks(file_id)
+            return DriveDeleteResponse(
+                message=f"File {file_id} successfully deleted and {deleted_chunks} indexed chunks removed",
+                deleted_id=file_id,
+            )
         except HTTPException:
             raise
         except ValueError as e:

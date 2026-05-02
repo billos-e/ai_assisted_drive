@@ -91,6 +91,35 @@ class RepositoryIndexer:
                     file_ids.add(str(file_id))
         return file_ids
 
+    def delete_file_chunks(self, file_id: str) -> int:
+        """Delete all indexed chunks for a given Drive file ID.
+
+        Returns the number of chunks removed.
+        """
+        if not file_id:
+            return 0
+
+        result = self._vectorstore.collection.get(
+            where={"drive_file_id": file_id},
+            include=[],
+        )
+        ids = result.get("ids") or []
+        if not ids:
+            return 0
+
+        self._vectorstore.collection.delete(ids=ids)
+        return len(ids)
+
+    def delete_files_chunks(self, file_ids: set[str]) -> int:
+        """Delete all indexed chunks for multiple Drive file IDs.
+
+        Returns the total number of removed chunks.
+        """
+        total_deleted = 0
+        for file_id in file_ids:
+            total_deleted += self.delete_file_chunks(file_id)
+        return total_deleted
+
     def search(self, query: str, top_k: int) -> list[dict[str, str]]:
         embedding = self._embedder.embed_query(query)
         result = self._vectorstore.collection.query(
