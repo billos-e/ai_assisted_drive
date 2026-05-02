@@ -9,10 +9,10 @@ from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFi
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
-from .config import Settings, get_settings
-from .schemas import ChatStreamRequest, DriveFolderCreateRequest, DriveItem, DriveUploadResponse
-from .services import AppServices, build_services
-from .startup import sync_repository_index
+from config import Settings, get_settings
+from schemas import ChatStreamRequest, DriveFolderCreateRequest, DriveItem, DriveUploadResponse
+from services import AppServices, build_services
+from startup import sync_repository_index
 
 
 @lru_cache(maxsize=1)

@@ -4,8 +4,8 @@ from collections.abc import Iterable
 
 from groq import Groq
 
-from ..config import Settings
-from ..schemas import ChatMessage
+from config import Settings
+from schemas import ChatMessage
 
 
 class GroqClient:

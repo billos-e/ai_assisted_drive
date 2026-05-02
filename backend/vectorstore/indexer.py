@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..config import Settings
-from .chroma_client import ChromaRepository
-from .embedder import GeminiEmbedder
+from config import Settings
+from vectorstore.chroma_client import ChromaRepository
+from vectorstore.embedder import GeminiEmbedder
 
 
 @dataclass(slots=True)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .services import AppServices
+from services import AppServices
 
 
 def sync_repository_index(services: AppServices) -> None:

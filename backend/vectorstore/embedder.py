@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from google import genai
 
-from ..config import Settings
+from config import Settings
 
 
 class GeminiEmbedder:
