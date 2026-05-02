@@ -249,17 +249,28 @@ def create_app() -> FastAPI:
                 yield from services.chat.stream_answer(question=payload.message, context_chunks=chunks, history=payload.history)
                 
                 # After the main response, send sources
-                # Deduplicate sources by source_path and chunk_index
+                # Deduplicate sources by source_path and chunk_index, filter by distance and limit count
                 seen_sources = set()
                 sources = []
+                max_distance = services.settings.sources_max_distance
+                max_sources = services.settings.sources_max_count
+                
                 for chunk in chunks:
-                    source_key = (chunk.get("source_path", ""), chunk.get("chunk_index", ""))
-                    if source_key not in seen_sources:
-                        seen_sources.add(source_key)
-                        try:
-                            distance = chunk.get("distance")
-                            if isinstance(distance, str):
-                                distance = float(distance)
+                    if len(sources) >= max_sources:
+                        break
+                    
+                    try:
+                        distance = chunk.get("distance")
+                        if isinstance(distance, str):
+                            distance = float(distance)
+                        
+                        # Filter by max distance threshold
+                        if distance > max_distance:
+                            continue
+                        
+                        source_key = (chunk.get("source_path", ""), chunk.get("chunk_index", ""))
+                        if source_key not in seen_sources:
+                            seen_sources.add(source_key)
                             sources.append({
                                 "source_path": chunk.get("source_path", ""),
                                 "file_name": chunk.get("file_name", ""),
@@ -267,8 +278,8 @@ def create_app() -> FastAPI:
                                 "chunk_index": int(chunk.get("chunk_index", 0)),
                                 "distance": distance,
                             })
-                        except (ValueError, TypeError):
-                            pass
+                    except (ValueError, TypeError):
+                        pass
                 
                 # Send sources separator and data
                 import json

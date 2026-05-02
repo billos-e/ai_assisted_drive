@@ -42,6 +42,8 @@ class Settings(BaseSettings):
     chunk_size_words: int = 500
     chunk_overlap_words: int = 50
     retrieval_top_k: int = 5
+    sources_max_distance: float = 0.4
+    sources_max_count: int = 3
 
     @property
     def max_upload_size_bytes(self) -> int:
