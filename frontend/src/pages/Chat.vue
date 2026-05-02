@@ -35,7 +35,7 @@
           :class="message.role"
         >
           <div class="message-bubble">
-            <div class="message-content">{{ message.content }}</div>
+            <div class="message-content markdown-content" v-html="formatMessageContent(message.content)"></div>
             <div v-if="message.sources && message.sources.length > 0" class="message-sources">
               <div class="sources-header">Sources:</div>
               <ul class="sources-list">
@@ -106,6 +106,8 @@
 import { ref, computed, nextTick, onMounted } from 'vue'
 import { CircleAlert, Trash2 } from 'lucide-vue-next'
 import { chatAPI } from '../services/api'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 
 const messages = ref([])
 const inputMessage = ref('')
@@ -122,6 +124,16 @@ const exampleQuestions = [
   'Summarize the key points',
   'What are the next steps?'
 ]
+
+marked.setOptions({
+  gfm: true,
+  breaks: true
+})
+
+const formatMessageContent = (content = '') => {
+  const renderedHtml = marked.parse(content)
+  return DOMPurify.sanitize(renderedHtml)
+}
 
 const scrollToBottom = async () => {
   await nextTick()
@@ -371,6 +383,65 @@ onMounted(() => {
 .message-content {
   font-size: 14px;
   line-height: 1.5;
+}
+
+.message-content :deep(p) {
+  margin: 0 0 var(--spacing-sm) 0;
+}
+
+.message-content :deep(p:last-child) {
+  margin-bottom: 0;
+}
+
+.message-content :deep(ul),
+.message-content :deep(ol) {
+  margin: 0 0 var(--spacing-sm) 1.25rem;
+}
+
+.message-content :deep(li + li) {
+  margin-top: 4px;
+}
+
+.message-content :deep(a) {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.message-content :deep(pre) {
+  background: rgba(0, 0, 0, 0.08);
+  padding: var(--spacing-sm);
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: var(--spacing-sm) 0;
+}
+
+.message-content :deep(code) {
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 12px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 4px;
+  padding: 2px 4px;
+}
+
+.message-content :deep(pre code) {
+  background: transparent;
+  padding: 0;
+}
+
+.message-content :deep(blockquote) {
+  border-left: 3px solid rgba(0, 0, 0, 0.2);
+  padding-left: var(--spacing-sm);
+  margin: var(--spacing-sm) 0;
+  opacity: 0.9;
+}
+
+.message.user .message-content :deep(pre),
+.message.user .message-content :deep(code) {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.message.user .message-content :deep(blockquote) {
+  border-left-color: rgba(255, 255, 255, 0.5);
 }
 
 .message-sources {
