@@ -37,7 +37,13 @@
           <div class="message-bubble">
             <div class="message-content">{{ message.content }}</div>
             <div v-if="message.sources && message.sources.length > 0" class="message-sources">
-              Sources: {{ message.sources.join(', ') }}
+              <div class="sources-header">Sources:</div>
+              <ul class="sources-list">
+                <li v-for="(source, idx) in message.sources" :key="`${source.source_path}-${source.chunk_index}-${idx}`" class="source-item">
+                  <span class="source-path" :title="source.source_path">{{ source.source_path }}</span>
+                  <span v-if="source.distance" class="source-distance">({{ (parseFloat(source.distance).toFixed(3)) }})</span>
+                </li>
+              </ul>
             </div>
           </div>
         </div>
@@ -109,6 +115,8 @@ const messagesContainer = ref(null)
 const hasIndexedFiles = ref(true) // TODO: Check actual indexing status from backend
 const currentTopK = ref(5)
 
+const CHAT_HISTORY_KEY = 'chat_history_v1'
+
 const exampleQuestions = [
   'What is the main topic?',
   'Summarize the key points',
@@ -122,36 +130,80 @@ const scrollToBottom = async () => {
   }
 }
 
+const saveChatHistory = () => {
+  try {
+    const historyData = {
+      version: 1,
+      timestamp: new Date().toISOString(),
+      messages: messages.value.map(m => ({
+        role: m.role,
+        content: m.content,
+        sources: m.sources || [],
+        timestamp: m.timestamp
+      }))
+    }
+    localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(historyData))
+  } catch (error) {
+    console.error('Failed to save chat history:', error)
+  }
+}
+
+const loadChatHistory = () => {
+  try {
+    const stored = localStorage.getItem(CHAT_HISTORY_KEY)
+    if (stored) {
+      const historyData = JSON.parse(stored)
+      // Only load if version matches
+      if (historyData.version === 1) {
+        messages.value = (historyData.messages || []).map(m => ({
+          role: m.role,
+          content: m.content,
+          sources: m.sources || [],
+          timestamp: m.timestamp || new Date().toISOString()
+        }))
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load chat history:', error)
+  }
+}
+
 const sendMessage = async (message = null) => {
   const text = message || inputMessage.value.trim()
   if (!text || isWaiting.value) return
+
+  const timestamp = new Date().toISOString()
 
   // Add user message
   messages.value.push({
     role: 'user',
     content: text,
-    sources: []
+    sources: [],
+    timestamp
   })
 
   messages.value.push({
     role: 'assistant',
     content: '',
-    sources: []
+    sources: [],
+    timestamp: new Date().toISOString()
   })
 
   inputMessage.value = ''
   isWaiting.value = true
 
   await scrollToBottom()
+  saveChatHistory()
 
   try {
     let assistantMessage = ''
 
-    // Stream response
-    await chatAPI.streamChat(
+    // Stream response - now returns {text, sources}
+    const result = await chatAPI.streamChat(
       text,
       messages.value
         .filter(m => m.role !== 'assistant' || m.content.length > 0)
+        .slice(0, -1) // Exclude the current empty assistant message
         .map(m => ({ role: m.role, content: m.content })),
       currentTopK.value,
       (chunk) => {
@@ -161,12 +213,17 @@ const sendMessage = async (message = null) => {
       }
     )
 
-    messages.value[messages.value.length - 1].content = assistantMessage
+    // Update assistant message with final content and sources
+    const assistantIndex = messages.value.length - 1
+    messages.value[assistantIndex].content = result.text || assistantMessage
+    messages.value[assistantIndex].sources = result.sources || []
 
     await scrollToBottom()
+    saveChatHistory()
   } catch (error) {
     console.error('Error sending message:', error)
     messages.value[messages.value.length - 1].content = 'Sorry, there was an error processing your request. Please try again.'
+    saveChatHistory()
   } finally {
     isWaiting.value = false
   }
@@ -180,9 +237,15 @@ const confirmClear = () => {
   messages.value = []
   inputMessage.value = ''
   showClearConfirm.value = false
+  try {
+    localStorage.removeItem(CHAT_HISTORY_KEY)
+  } catch (error) {
+    console.error('Failed to clear chat history:', error)
+  }
 }
 
 onMounted(() => {
+  loadChatHistory()
   scrollToBottom()
 })
 </script>
@@ -314,11 +377,61 @@ onMounted(() => {
   font-size: 12px;
   color: var(--color-text-secondary);
   margin-top: var(--spacing-sm);
-  font-style: italic;
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .message.user .message-sources {
+  border-top-color: rgba(255, 255, 255, 0.2);
   color: rgba(255, 255, 255, 0.7);
+}
+
+.sources-header {
+  font-weight: 600;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.sources-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.source-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+  border-radius: 3px;
+  transition: background-color 0.2s;
+  cursor: pointer;
+}
+
+.source-item:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.message.user .source-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.source-path {
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 11px;
+  word-break: break-all;
+  flex: 1;
+  min-width: 0;
+}
+
+.source-distance {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  opacity: 0.7;
+  flex-shrink: 0;
 }
 
 .thinking-indicator {

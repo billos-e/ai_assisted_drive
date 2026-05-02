@@ -13,6 +13,7 @@ class RetrievedChunk:
     file_id: str
     file_name: str
     folder_path: str
+    source_path: str
     chunk_index: int
     distance: float | None = None
 
@@ -56,6 +57,9 @@ class RepositoryIndexer:
         if not chunks:
             return 0
 
+        # Normalize source_path: folder_path + file_name
+        source_path = self._normalize_path(folder_path, file_name)
+
         embeddings = [self._embedder.embed_document(chunk) for chunk in chunks]
         ids = [f"{file_id}:{chunk_index}" for chunk_index in range(len(chunks))]
         metadatas = [
@@ -63,6 +67,7 @@ class RepositoryIndexer:
                 "drive_file_id": file_id,
                 "file_name": file_name,
                 "folder_path": folder_path,
+                "source_path": source_path,
                 "chunk_index": chunk_index,
                 "mime_type": mime_type,
             }
@@ -107,8 +112,22 @@ class RepositoryIndexer:
                     "file_id": str(metadata.get("drive_file_id", "")),
                     "file_name": str(metadata.get("file_name", "")),
                     "folder_path": str(metadata.get("folder_path", "")),
+                    "source_path": str(metadata.get("source_path", "")),
                     "chunk_index": str(metadata.get("chunk_index", "")),
-                    "distance": str(distance),
+                    "distance": float(distance),
                 }
             )
         return chunks
+
+    @staticmethod
+    def _normalize_path(folder_path: str, file_name: str) -> str:
+        """Normalize source_path by combining folder_path and file_name."""
+        parts = []
+        if folder_path:
+            # Clean up folder path: remove leading/trailing slashes and split
+            cleaned = folder_path.strip("/").strip()
+            if cleaned:
+                parts.append(cleaned)
+        if file_name:
+            parts.append(file_name.strip())
+        return "/".join(parts) if parts else file_name.strip()

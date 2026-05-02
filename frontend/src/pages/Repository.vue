@@ -102,6 +102,16 @@
               <span>Indexing…</span>
             </div>
           </div>
+          <div class="file-actions" @click.stop>
+            <button
+              class="icon-btn danger"
+              :title="`Delete ${item.name}`"
+              @click="confirmDeleteItem(item)"
+              aria-label="Delete item"
+            >
+              <Trash2 :size="18" :stroke-width="2.25" />
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -110,7 +120,7 @@
 
 <script setup>
 import { ref, onMounted, watch } from 'vue'
-import { ArrowLeft, FolderPlus, Inbox, LoaderCircle, Upload } from 'lucide-vue-next'
+import { ArrowLeft, FolderPlus, Inbox, LoaderCircle, Trash2, Upload } from 'lucide-vue-next'
 import { driveAPI } from '../services/api'
 import { getFileIconComponent } from '../utils/icons'
 
@@ -146,6 +156,38 @@ const handleItemClick = (item) => {
   if (item.type === 'folder') {
     currentFolderId.value = item.id
     currentFolderName.value = item.name
+    return
+  }
+
+  openItem(item)
+}
+
+const openItem = async (item) => {
+  if (item.type !== 'file') return
+
+  try {
+    const { url } = await driveAPI.openFile(item.id)
+    window.open(url, '_blank', 'noopener,noreferrer')
+  } catch (error) {
+    console.error('Error opening item:', error)
+    alert(`Error opening ${item.name}`)
+  }
+}
+
+const confirmDeleteItem = async (item) => {
+  const message = item.type === 'folder'
+    ? `Delete folder "${item.name}"? This will remove it from Google Drive.`
+    : `Delete file "${item.name}"? This will remove it from Google Drive.`
+
+  if (!window.confirm(message)) return
+
+  try {
+    await driveAPI.deleteItem(item.id)
+    indexingFiles.value = indexingFiles.value.filter(id => id !== item.id)
+    await loadItems()
+  } catch (error) {
+    console.error('Error deleting item:', error)
+    alert(`Error deleting ${item.name}`)
   }
 }
 
@@ -424,6 +466,62 @@ watch(currentFolderId, () => {
   min-width: 0;
 }
 
+.file-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.file-item:hover .file-actions,
+.file-item:focus-within .file-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.icon-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-primary);
+  padding: 0;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.icon-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.icon-btn:hover {
+  color: var(--color-primary);
+}
+
+.icon-btn.danger {
+  color: #ef4444;
+}
+
+.icon-btn.danger:hover {
+  color: #dc2626;
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.file-item .file-actions {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+
 .file-name {
   font-size: 14px;
   font-weight: 500;
@@ -489,6 +587,14 @@ watch(currentFolderId, () => {
   .header-actions {
     width: 100%;
     justify-content: flex-start;
+  }
+
+  .file-item {
+    align-items: flex-start;
+  }
+
+  .file-actions {
+    margin-left: auto;
   }
 }
 </style>

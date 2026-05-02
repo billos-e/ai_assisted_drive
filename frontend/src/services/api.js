@@ -69,6 +69,34 @@ export const driveAPI = {
     } catch (error) {
       throw error
     }
+  },
+
+  /**
+   * Open a file in Google Drive
+   * @param {string} fileId - Drive file ID
+   * @returns {Promise<{url: string}>}
+   */
+  async openFile(fileId) {
+    try {
+      const response = await apiClient.get(`/drive/${fileId}/open`)
+      return response.data
+    } catch (error) {
+      throw error
+    }
+  },
+
+  /**
+   * Delete a file or folder from Google Drive
+   * @param {string} fileId - Drive file or folder ID
+   * @returns {Promise}
+   */
+  async deleteItem(fileId) {
+    try {
+      const response = await apiClient.delete(`/drive/${fileId}`)
+      return response.data
+    } catch (error) {
+      throw error
+    }
   }
 }
 
@@ -79,7 +107,7 @@ export const chatAPI = {
    * @param {Array} history - Chat history
    * @param {number} topK - Number of sources
    * @param {Function} onChunk - Callback for each chunk
-   * @returns {Promise}
+   * @returns {Promise<{text: string, sources: Array}>}
    */
   async streamChat(message, history = [], topK = 5, onChunk = null) {
     try {
@@ -104,19 +132,47 @@ export const chatAPI = {
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
       let fullText = ''
+      let sources = []
 
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
 
         const chunk = decoder.decode(value)
-        fullText += chunk
-        if (onChunk) {
-          onChunk(chunk)
+        
+        // Check for sources separator
+        if (chunk.includes('[SOURCES_SEPARATOR]')) {
+          // Split text and sources
+          const parts = chunk.split('[SOURCES_SEPARATOR]')
+          
+          // Send the text part first
+          if (parts[0]) {
+            fullText += parts[0]
+            if (onChunk) {
+              onChunk(parts[0])
+            }
+          }
+          
+          // Parse sources from remaining part
+          if (parts[1]) {
+            try {
+              const sourcesJson = parts[1].trim()
+              if (sourcesJson) {
+                sources = JSON.parse(sourcesJson)
+              }
+            } catch (e) {
+              console.error('Failed to parse sources:', e)
+            }
+          }
+        } else {
+          fullText += chunk
+          if (onChunk) {
+            onChunk(chunk)
+          }
         }
       }
 
-      return fullText
+      return { text: fullText, sources }
     } catch (error) {
       throw error
     }
