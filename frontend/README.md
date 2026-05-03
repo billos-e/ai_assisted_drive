@@ -1,64 +1,50 @@
 # AI Assisted Drive — Frontend
 
-Frontend application built with Vue.js and Vite for the AI Assisted Drive project.
+L'interface utilisateur de l'assistant AI Assisted Drive, construite avec Vue.js 3 et Vite.
 
-## Prerequisites
+## 📋 Pré-requis
 
-- Node.js 18+ and npm
+- **Node.js 18+**
+- **npm** (ou yarn)
 
-## Installation
+## 🛠️ Installation
 
-```bash
-cd frontend
-npm install
-```
+1. **Naviguer dans le dossier frontend :**
+   ```bash
+   cd frontend
+   ```
 
-## Configuration
+2. **Installer les dépendances :**
+   ```bash
+   npm install
+   ```
 
-Create a `.env.local` file (optional) to override the API URL:
+3. **Configuration (Optionnel) :**
+   Le frontend est configuré pour communiquer avec le backend sur `http://127.0.0.1:8000`. Si vous devez changer cela, créez un fichier `.env.local` :
+   ```env
+   VITE_API_URL=http://votre-url-api
+   ```
 
-```
-VITE_API_URL=http://127.0.0.1:8000
-```
+## 🚀 Lancement
 
-## Development
-
+Pour lancer l'application en mode développement :
 ```bash
 npm run dev
 ```
 
-The app will be available at `http://localhost:5173` with hot module reloading.
+L'application sera accessible sur : **[http://localhost:5173](http://localhost:5173)**
 
-The dev server proxies API calls from `/api/*` to `http://127.0.0.1:8000`.
+## 📦 Build (Production)
 
-## Build
-
+Pour générer les fichiers statiques optimisés :
 ```bash
 npm run build
 ```
+Le résultat sera dans le dossier `dist/`.
 
-The optimized production build is output to `dist/`.
+## 📁 Structure
 
-## Architecture
-
-### Pages
-- **Repository** — File/folder browser and uploader
-- **Chat** — AI chat interface with streaming responses
-- **Settings** — Configuration (account, repository, chat settings)
-
-### Components
-- **Sidebar** — Navigation between pages
-
-### Services
-- **api.js** — API client for backend endpoints
-- **icons.js** — File type icon utilities
-
-### Styles
-All styles use CSS variables for theming (`style.css`).
-
-## Notes
-
-- The app communicates with the backend API at `http://127.0.0.1:8000`
-- Streaming chat responses are handled via the Fetch API
-- File uploads support progress tracking
-- The UI follows the specifications in `ui-specifications.md`
+- `src/pages/` : Les vues principales (Repository, Chat, Settings).
+- `src/components/` : Composants UI réutilisables.
+- `src/services/` : Client API et utilitaires.
+- `src/style.css` : Design system et styles globaux.
