@@ -1,2 +1,2 @@
 [phases.setup]
-nixPkgs = ["ffmpeg", "tesseract"]
+cmds = ["apt-get update && apt-get install -y ffmpeg tesseract-ocr"]
