@@ -1,150 +1,148 @@
 <template>
   <div class="repository-page">
     <!-- Header -->
-    <div class="repository-header glass">
+    <header class="repository-header">
       <div class="header-left">
-        <h1 class="page-title">Files</h1>
-        <div class="breadcrumb">
-          <button class="breadcrumb-item" v-if="currentFolderId" @click="goToRoot">
-            Root
-          </button>
-          <span v-if="currentFolderId" class="breadcrumb-sep">/</span>
-          <span v-if="currentFolderId" class="breadcrumb-current">{{ currentFolderName }}</span>
+        <h1 class="page-title">All files</h1>
+      </div>
+
+      <div class="header-right">
+        <div class="search-bar">
+          <Search :size="18" class="search-icon" />
+          <input type="text" placeholder="Search files..." />
+        </div>
+        <button class="icon-btn">
+          <Bell :size="20" />
+        </button>
+        <div class="user-avatar">
+          <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="User Avatar" />
         </div>
       </div>
+    </header>
 
-      <div class="header-actions">
-        <button
-          v-if="currentFolderId"
-          class="btn btn-secondary"
-          @click="goToRoot"
-          title="Go back to root"
-        >
-          <ArrowLeft :size="16" />
-          <span>Back</span>
-        </button>
-        <button
-          class="btn btn-secondary"
-          @click="showCreateFolderInput"
-          :disabled="creatingFolder"
-        >
-          <FolderPlus :size="16" />
-          <span>New Folder</span>
-        </button>
-        <button
-          class="btn btn-primary"
-          @click="triggerFileUpload"
-          :disabled="uploading"
-        >
-          <Upload :size="16" />
-          <span>Upload File</span>
-        </button>
-        <input
-          ref="fileInput"
-          type="file"
-          multiple
-          @change="handleFileSelect"
-          style="display: none"
-        />
-      </div>
-    </div>
+    <!-- Content Area -->
+    <div class="repository-content">
+      <!-- Action Bar -->
+      <div class="action-bar">
+        <div class="breadcrumb">
+          <span class="breadcrumb-item" @click="goToRoot">My Files</span>
+          <template v-if="currentFolderId">
+            <ChevronRight :size="14" class="breadcrumb-sep" />
+            <span class="breadcrumb-current">{{ currentFolderName }}</span>
+          </template>
+        </div>
 
-    <!-- Create folder input -->
-    <Transition name="slide-down">
-      <div v-if="showNewFolderInput" class="inline-input-container glass">
-        <div class="input-wrapper">
-          <Folder :size="18" class="input-icon" />
+        <div class="actions">
+          <button class="btn-secondary" @click="showCreateFolderInput">
+            <FolderPlus :size="18" />
+            <span>New folder</span>
+          </button>
+          <button class="btn-primary" @click="triggerFileUpload">
+            <Upload :size="18" />
+            <span>Upload</span>
+          </button>
           <input
-            ref="folderInput"
-            v-model="newFolderName"
-            type="text"
-            placeholder="Name your new folder..."
-            @keyup.enter="createFolder"
-            @keyup.escape="showNewFolderInput = false"
-            autofocus
+            ref="fileInput"
+            type="file"
+            multiple
+            @change="handleFileSelect"
+            style="display: none"
           />
         </div>
-        <div class="input-actions">
-          <button class="btn-icon success" @click="createFolder" title="Confirm">
-            <Check :size="18" />
-          </button>
-          <button class="btn-icon danger" @click="showNewFolderInput = false" title="Cancel">
-            <X :size="18" />
-          </button>
-        </div>
       </div>
-    </Transition>
 
-    <!-- Upload progress -->
-    <Transition name="fade">
-      <div v-if="uploading" class="upload-progress glass">
-        <div class="progress-info">
-          <div class="file-name-container">
-            <Upload :size="14" class="upload-icon" />
-            <span class="file-name-text">{{ uploadingFileName }}</span>
+      <!-- Create folder input -->
+      <Transition name="slide-down">
+        <div v-if="showNewFolderInput" class="inline-input-container">
+          <div class="input-wrapper">
+            <Folder :size="20" class="input-icon" />
+            <input
+              ref="folderInput"
+              v-model="newFolderName"
+              type="text"
+              placeholder="Folder name"
+              @keyup.enter="createFolder"
+              @keyup.escape="showNewFolderInput = false"
+              autofocus
+            />
           </div>
-          <span class="progress-percent">{{ uploadProgress }}%</span>
+          <div class="input-actions">
+            <button class="action-btn-text" @click="createFolder">Create</button>
+            <button class="action-btn-text cancel" @click="showNewFolderInput = false">Cancel</button>
+          </div>
         </div>
-        <div class="progress-bar-container">
-          <div class="progress-bar-fill" :style="{ width: uploadProgress + '%' }"></div>
+      </Transition>
+
+      <!-- Upload progress -->
+      <Transition name="fade">
+        <div v-if="uploading" class="upload-progress">
+          <div class="progress-info">
+            <span class="file-name-text">Uploading {{ uploadingFileName }}...</span>
+            <span class="progress-percent">{{ uploadProgress }}%</span>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill" :style="{ width: uploadProgress + '%' }"></div>
+          </div>
         </div>
-      </div>
-    </Transition>
+      </Transition>
 
-    <!-- File list -->
-    <div class="file-list-container">
-      <div v-if="loading" class="loading-overlay">
-        <div class="spinner"></div>
-      </div>
-
-      <div v-if="!loading && items.length === 0" class="empty-state">
-        <div class="empty-illustration">
-          <Inbox :size="64" class="empty-icon" />
+      <!-- File Table -->
+      <div class="file-table-container">
+        <div class="table-header">
+          <div class="col-name">Name</div>
+          <div class="col-size">Size</div>
+          <div class="col-date">Date modified</div>
+          <div class="col-actions"></div>
         </div>
-        <h3>No files found</h3>
-        <p>Upload your first file to get started with AI Assisted Drive</p>
-      </div>
 
-      <div v-else class="file-list">
-        <TransitionGroup name="list">
+        <div v-if="loading" class="loading-state">
+          <div class="spinner"></div>
+        </div>
+
+        <div v-else-if="items.length === 0" class="empty-state">
+          <div class="empty-illustration">
+            <Inbox :size="48" />
+          </div>
+          <p>No files found in this folder</p>
+        </div>
+
+        <div v-else class="table-body">
           <div
             v-for="item in items"
             :key="item.id"
-            class="file-item"
-            :class="{ 'is-folder': item.type === 'folder' }"
+            class="file-row"
             @click="handleItemClick(item)"
           >
-            <div class="file-icon-wrapper" :class="item.type">
-              <component :is="getFileIconComponent(item.mime_type, item.type === 'folder')" :size="22" />
+            <div class="col-name">
+              <div class="file-icon-wrapper" :style="{ color: getIconColor(item) }">
+                <component :is="getFileIconComponent(item.mime_type, item.type === 'folder')" :size="22" />
+              </div>
+              <span class="file-name">{{ item.name }}</span>
+              <div v-if="indexingFiles.includes(item.id)" class="indexing-badge">
+                <LoaderCircle :size="12" class="spin" />
+                <span>Indexing</span>
+              </div>
             </div>
             
-            <div class="file-content">
-              <div class="file-main">
-                <span class="file-name">{{ item.name }}</span>
-                <div v-if="indexingFiles.includes(item.id)" class="badge indexing">
-                  <LoaderCircle :size="12" class="spin" />
-                  <span>Indexing</span>
-                </div>
-              </div>
-              <div class="file-meta">
-                <span v-if="item.type === 'file'">{{ formatSize(item.size) }}</span>
-                <span v-else>Folder</span>
-                <span class="dot">•</span>
-                <span>{{ formatDate(item.modified_time) }}</span>
-              </div>
+            <div class="col-size">
+              {{ item.type === 'file' ? formatSize(item.size) : '--' }}
             </div>
 
-            <div class="file-actions" @click.stop>
+            <div class="col-date">
+              {{ formatDate(item.modified_time) }}
+            </div>
+
+            <div class="col-actions">
               <button
-                class="btn-icon danger"
-                :title="`Delete ${item.name}`"
-                @click="confirmDeleteItem(item)"
+                class="delete-btn"
+                title="Delete"
+                @click.stop="confirmDeleteItem(item)"
               >
                 <Trash2 :size="18" />
               </button>
             </div>
           </div>
-        </TransitionGroup>
+        </div>
       </div>
     </div>
   </div>
@@ -152,7 +150,19 @@
 
 <script setup>
 import { ref, onMounted, watch } from 'vue'
-import { ArrowLeft, FolderPlus, Inbox, LoaderCircle, Trash2, Upload, Folder, Check, X } from 'lucide-vue-next'
+import { 
+  Search, 
+  Bell, 
+  ChevronRight, 
+  FolderPlus, 
+  Upload, 
+  Folder, 
+  Inbox, 
+  LoaderCircle, 
+  Trash2,
+  Check,
+  X
+} from 'lucide-vue-next'
 import { driveAPI } from '../services/api'
 import { getFileIconComponent } from '../utils/icons'
 
@@ -274,7 +284,7 @@ const handleFileSelect = async (event) => {
 }
 
 const formatSize = (bytes) => {
-  if (!bytes) return '0 B'
+  if (!bytes) return '--'
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
@@ -290,12 +300,26 @@ const formatDate = (dateString) => {
   })
 }
 
+const getIconColor = (item) => {
+  if (item.type === 'folder') return '#4F46E5'
+  const mime = item.mime_type?.toLowerCase() || ''
+  if (mime.includes('pdf')) return 'var(--color-file-pdf)'
+  if (mime.includes('presentation') || mime.includes('powerpoint')) return 'var(--color-file-slides)'
+  if (mime.includes('image')) return 'var(--color-file-image)'
+  if (mime.includes('zip') || mime.includes('tar') || mime.includes('archive')) return 'var(--color-file-archive)'
+  return 'var(--color-text-secondary)'
+}
+
 onMounted(() => {
   loadItems()
 })
 
 watch(currentFolderId, () => {
   loadItems()
+})
+
+defineExpose({
+  triggerFileUpload
 })
 </script>
 
@@ -305,67 +329,162 @@ watch(currentFolderId, () => {
   flex-direction: column;
   width: 100%;
   height: 100%;
-  overflow: hidden;
   background-color: var(--color-background);
+  overflow: hidden;
 }
 
 .repository-header {
-  padding: var(--spacing-xl) var(--spacing-lg);
+  height: 70px;
+  background-color: var(--color-surface);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 0 var(--spacing-xl);
   flex-shrink: 0;
-  z-index: 10;
 }
 
 .page-title {
-  font-size: 24px;
-  margin-bottom: 4px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+}
+
+.search-bar {
+  position: relative;
+  width: 300px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-muted);
+}
+
+.search-bar input {
+  width: 100%;
+  padding: 10px 12px 10px 40px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-background);
+  font-size: 14px;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.icon-btn:hover {
+  background-color: var(--color-background);
+}
+
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--color-border);
+}
+
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.repository-content {
+  flex: 1;
+  padding: var(--spacing-xl);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.action-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .breadcrumb {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
-  color: var(--color-text-secondary);
-}
-
-.breadcrumb-item {
-  background: none;
-  padding: 0;
-  color: var(--color-primary-light);
-  cursor: pointer;
-  border: none;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
 }
 
+.breadcrumb-item {
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
 .breadcrumb-item:hover {
-  color: white;
+  color: var(--color-primary);
+}
+
+.breadcrumb-sep {
+  color: var(--color-text-muted);
 }
 
 .breadcrumb-current {
   color: var(--color-text-primary);
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.header-actions {
+.actions {
   display: flex;
   gap: var(--spacing-md);
 }
 
+.btn-primary {
+  background-color: var(--color-primary);
+  color: white;
+  padding: 8px 20px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  background-color: white;
+  color: var(--color-text-primary);
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
 .inline-input-container {
-  margin: 0 var(--spacing-lg) var(--spacing-lg);
+  background-color: white;
   padding: var(--spacing-md);
   border-radius: var(--radius-md);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: var(--spacing-md);
+  border: 1px solid var(--color-primary);
+  box-shadow: var(--shadow-subtle);
 }
 
 .input-wrapper {
@@ -375,226 +494,167 @@ watch(currentFolderId, () => {
   flex: 1;
 }
 
-.input-icon {
-  color: var(--color-text-muted);
-}
-
 .input-wrapper input {
-  background: transparent;
   border: none;
-  width: 100%;
   font-size: 15px;
-  padding: 0;
-}
-
-.input-wrapper input:focus {
-  box-shadow: none;
+  outline: none;
+  width: 100%;
 }
 
 .input-actions {
   display: flex;
-  gap: 8px;
+  gap: 12px;
+}
+
+.action-btn-text {
+  background: none;
+  border: none;
+  font-weight: 600;
+  color: var(--color-primary);
+  cursor: pointer;
+}
+
+.action-btn-text.cancel {
+  color: var(--color-text-secondary);
 }
 
 .upload-progress {
-  margin: 0 var(--spacing-lg) var(--spacing-lg);
+  background-color: white;
   padding: var(--spacing-md);
   border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
 }
 
 .progress-info {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.file-name-container {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--color-text-primary);
+  margin-bottom: 8px;
   font-size: 13px;
   font-weight: 500;
 }
 
-.upload-icon {
-  color: var(--color-primary-light);
-}
-
-.progress-percent {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-primary-light);
-}
-
 .progress-bar-container {
   height: 6px;
-  background: var(--color-surface-hover);
+  background-color: var(--color-background);
   border-radius: 3px;
   overflow: hidden;
 }
 
 .progress-bar-fill {
   height: 100%;
-  background: var(--color-primary);
+  background-color: var(--color-primary);
   border-radius: 3px;
-  transition: width 0.3s ease;
 }
 
-.file-list-container {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0 var(--spacing-lg) var(--spacing-lg);
-}
-
-.file-list {
+.file-table-container {
+  background-color: white;
+  border-radius: var(--radius-md);
   display: flex;
   flex-direction: column;
-  gap: 8px;
 }
 
-.file-item {
+.table-header {
   display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-  padding: 12px var(--spacing-md);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.file-item:hover {
-  background: var(--color-surface-hover);
-  border-color: var(--color-border-hover);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
+.col-name { flex: 2; display: flex; align-items: center; gap: 16px; min-width: 0; }
+.col-size { flex: 0.5; }
+.col-date { flex: 1; }
+.col-actions { width: 50px; display: flex; justify-content: flex-end; }
+
+.file-row {
+  display: flex;
+  padding: 0 24px;
+  height: 60px;
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.file-row:hover {
+  background-color: var(--color-background);
+}
+
+.file-row:last-child {
+  border-bottom: none;
 }
 
 .file-icon-wrapper {
-  width: 42px;
-  height: 42px;
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-hover);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-text-secondary);
-  transition: all 0.2s;
-}
-
-.file-item:hover .file-icon-wrapper {
-  color: var(--color-primary);
-  background: rgba(79, 70, 229, 0.1);
-}
-
-.file-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.file-main {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-shrink: 0;
 }
 
 .file-name {
   font-size: 15px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.file-meta {
-  font-size: 12px;
-  color: var(--color-text-muted);
+.indexing-badge {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 2px;
+  gap: 6px;
+  padding: 2px 8px;
+  background-color: #FEF3C7;
+  color: #D97706;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
 }
 
-.dot {
-  font-size: 8px;
-}
-
-.file-actions {
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.file-item:hover .file-actions {
-  opacity: 1;
-}
-
-.btn-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  color: var(--color-text-muted);
+.delete-btn {
+  background: none;
   border: none;
+  color: var(--color-text-muted);
   cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  opacity: 0;
   transition: all 0.2s;
 }
 
-.btn-icon:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--color-text-primary);
+.file-row:hover .delete-btn {
+  opacity: 1;
 }
 
-.btn-icon.danger:hover {
-  background: rgba(239, 68, 68, 0.1);
+.delete-btn:hover {
   color: var(--color-error);
+  background-color: #FEE2E2;
 }
 
-.btn-icon.success:hover {
-  background: rgba(16, 185, 129, 0.1);
-  color: var(--color-success);
-}
-
-.empty-state {
+.loading-state, .empty-state {
+  padding: 100px 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 80px 20px;
-  text-align: center;
+  color: var(--color-text-muted);
+  gap: 16px;
 }
 
 .empty-illustration {
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  background: var(--color-surface-hover);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: var(--spacing-lg);
-  color: var(--color-text-muted);
-}
-
-.empty-state h3 {
-  font-size: 20px;
-  margin-bottom: 8px;
-}
-
-.empty-state p {
-  color: var(--color-text-muted);
-  max-width: 300px;
-  font-size: 14px;
+  color: var(--color-border);
 }
 
 .spin {
   animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* Transitions */
@@ -602,7 +662,7 @@ watch(currentFolderId, () => {
   transition: all 0.3s ease;
 }
 .slide-down-enter-from, .slide-down-leave-to {
-  transform: translateY(-20px);
+  transform: translateY(-10px);
   opacity: 0;
 }
 
@@ -611,38 +671,5 @@ watch(currentFolderId, () => {
 }
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
-}
-
-.list-enter-active, .list-leave-active {
-  transition: all 0.4s ease;
-}
-.list-enter-from {
-  opacity: 0;
-  transform: translateX(-20px);
-}
-.list-leave-to {
-  opacity: 0;
-  transform: translateX(20px);
-}
-
-@media (max-width: 768px) {
-  .repository-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--spacing-lg);
-  }
-  
-  .header-actions {
-    justify-content: space-between;
-  }
-  
-  .btn span {
-    display: none;
-  }
-  
-  .btn {
-    padding: 10px;
-    flex: 1;
-  }
 }
 </style>

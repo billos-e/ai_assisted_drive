@@ -1,13 +1,14 @@
 <template>
   <div class="app-container">
-    <div class="bg-mesh"></div>
     <Sidebar 
       :activeSection="activeSection"
+      :isCollapsed="isSidebarCollapsed"
       @navigate="handleNavigation"
+      @toggle-collapse="toggleSidebar"
     />
     <main class="main-content">
       <Transition name="page" mode="out-in">
-        <Repository v-if="activeSection === 'repository'" :key="'repo'" />
+        <Repository v-if="activeSection === 'repository'" ref="repositoryRef" :key="'repo'" />
         <Chat v-else-if="activeSection === 'chat'" :key="'chat'" />
         <Settings v-else-if="activeSection === 'settings'" :key="'settings'" />
       </Transition>
@@ -23,9 +24,15 @@ import Chat from './pages/Chat.vue'
 import Settings from './pages/Settings.vue'
 
 const activeSection = ref('repository')
+const isSidebarCollapsed = ref(false)
+const repositoryRef = ref(null)
 
 const handleNavigation = (section) => {
   activeSection.value = section
+}
+
+const toggleSidebar = () => {
+  isSidebarCollapsed.value = !isSidebarCollapsed.value
 }
 </script>
 
@@ -36,26 +43,10 @@ const handleNavigation = (section) => {
   height: 100vh;
   background-color: var(--color-background);
   overflow: hidden;
-  position: relative;
-}
-
-.bg-mesh {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  opacity: 0.4;
-  background: 
-    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.15) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(16, 185, 129, 0.05) 0px, transparent 50%);
-  filter: blur(80px);
-  pointer-events: none;
 }
 
 .main-content {
   flex: 1;
-  position: relative;
-  z-index: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -64,26 +55,22 @@ const handleNavigation = (section) => {
 /* Page Transitions */
 .page-enter-active,
 .page-leave-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease-out;
 }
 
 .page-enter-from {
   opacity: 0;
-  transform: translateY(10px);
+  transform: translateY(4px);
 }
 
 .page-leave-to {
   opacity: 0;
-  transform: translateY(-10px);
+  transform: translateY(-4px);
 }
 
 @media (max-width: 900px) {
   .app-container {
     flex-direction: column;
-  }
-
-  .main-content {
-    width: 100%;
   }
 }
 </style>

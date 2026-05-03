@@ -12,27 +12,42 @@
     <div class="messages-container" ref="messagesContainer">
       <!-- Empty state -->
       <div v-if="messages.length === 0" class="empty-chat-state">
-        <div class="welcome-container glass">
-          <div class="welcome-icon">
-            <Sparkles :size="32" />
-          </div>
-          <div class="welcome-message">
-            <h2>Ask your AI Drive</h2>
-            <p>Summarize documents, extract insights, or find information across all your uploaded files.</p>
-          </div>
+        <div class="hero-section">
+          <h1 class="salutation">Bienvenu !!</h1>
+          <h2 class="main-question">Quelle information cherchez vous aujourd'hui ?</h2>
+          <p class="instruction-text">Commencez avec l'une de nos requetes les plus communes ou promptez par vous même</p>
         </div>
         
-        <div class="suggestions-container">
-          <p class="suggestions-title">Try asking...</p>
-          <div class="example-chips">
+        <div class="suggestions-grid">
+          <button
+            v-for="(example, index) in exampleQuestions"
+            :key="index"
+            class="suggestion-card"
+            @click="sendMessage(example.text)"
+          >
+            <span class="suggestion-text">{{ example.text }}</span>
+            <div class="suggestion-icon">
+              <component :is="example.icon" :size="20" :stroke-width="1.5" />
+            </div>
+          </button>
+        </div>
+
+        <!-- Central Input for empty state -->
+        <div class="central-input-container">
+          <div class="main-input-bar">
+            <input
+              v-model="inputMessage"
+              type="text"
+              placeholder="Dites ce dont vous avez besoin..."
+              @keyup.enter="sendMessage(inputMessage)"
+              :disabled="isWaiting || !hasIndexedFiles"
+            />
             <button
-              v-for="(example, index) in exampleQuestions"
-              :key="index"
-              class="chip glass"
-              @click="sendMessage(example)"
+              class="send-btn-circle"
+              @click="sendMessage(inputMessage)"
+              :disabled="!inputMessage.trim() || isWaiting || !hasIndexedFiles"
             >
-              <MessageSquare :size="14" />
-              <span>{{ example }}</span>
+              <ArrowRight :size="20" />
             </button>
           </div>
         </div>
@@ -53,7 +68,13 @@
           
           <div class="message-bubble-container">
             <div class="message-bubble">
-              <div class="message-content markdown-content" v-html="formatMessageContent(message.content)"></div>
+              <!-- If assistant and waiting and content is empty, show thinking dots after delay -->
+              <div v-if="message.role === 'assistant' && !message.content && isWaiting && isResponseDelayed" class="thinking-dots">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+              </div>
+              <div v-else class="message-content markdown-content" v-html="formatMessageContent(message.content)"></div>
               
               <div v-if="message.sources && message.sources.length > 0" class="message-sources-inline">
                 <div class="source-tooltip-container">
@@ -66,10 +87,10 @@
                       v-for="(source, idx) in message.sources" 
                       :key="`${source.source_path}-${idx}`" 
                       class="tooltip-item"
-                      @click="openSource(source.source_path)"
+                      @click="openSource(source)"
                     >
                       <FileText :size="12" />
-                      <span>{{ truncatePath(source.source_path) }}</span>
+                      <span>{{ source.file_name || truncatePath(source.source_path) }}</span>
                     </div>
                   </div>
                 </div>
@@ -78,50 +99,39 @@
           </div>
         </div>
 
-        <!-- Thinking indicator -->
-        <div v-if="isWaiting" class="message-wrapper assistant">
-          <div class="avatar-small assistant">
-            <Sparkles :size="14" />
-          </div>
-          <div class="thinking-bubble">
-            <span class="dot"></span>
-            <span class="dot"></span>
-            <span class="dot"></span>
-          </div>
-        </div>
+
       </template>
     </div>
 
-    <!-- Input area -->
-    <div class="input-area glass">
+    <!-- Input area (only shown when there are messages) -->
+    <div v-if="messages.length > 0" class="input-area-floating">
       <div class="input-wrapper">
-        <div class="input-container glass">
+        <div class="input-upper-actions">
+          <button
+            class="clear-btn-visible"
+            @click="clearConversation"
+            :disabled="isWaiting"
+            title="Vider la conversation"
+          >
+            <Trash2 :size="16" />
+            <span>Vider la conversation</span>
+          </button>
+        </div>
+        <div class="main-input-bar">
           <input
             v-model="inputMessage"
             type="text"
-            placeholder="Ask a question about your files..."
+            placeholder="Dites ce dont vous avez besoin..."
             @keyup.enter="sendMessage(inputMessage)"
             :disabled="isWaiting || !hasIndexedFiles"
           />
-          <div class="input-actions">
-            <button
-              v-if="messages.length > 0"
-              class="action-icon-btn"
-              @click="clearConversation"
-              :disabled="isWaiting"
-              title="Clear conversation"
-            >
-              <RotateCcw :size="18" />
-            </button>
-            <button
-              class="send-btn"
-              :class="{ active: inputMessage.trim() && !isWaiting }"
-              @click="sendMessage(inputMessage)"
-              :disabled="!inputMessage.trim() || isWaiting || !hasIndexedFiles"
-            >
-              <Send :size="18" />
-            </button>
-          </div>
+          <button
+            class="send-btn-circle"
+            @click="sendMessage(inputMessage)"
+            :disabled="!inputMessage.trim() || isWaiting || !hasIndexedFiles"
+          >
+            <ArrowRight :size="20" />
+          </button>
         </div>
       </div>
     </div>
@@ -147,7 +157,11 @@
 
 <script setup>
 import { ref, computed, nextTick, onMounted } from 'vue'
-import { CircleAlert, Trash2, Sparkles, Send, User, BookOpen, FileText, RotateCcw, MessageSquare, Link as LinkIcon } from 'lucide-vue-next'
+import { 
+  CircleAlert, Trash2, Sparkles, Send, User, BookOpen, 
+  FileText, RotateCcw, MessageSquare, Link as LinkIcon,
+  ArrowRight, Mail, Sliders, MessageCircle
+} from 'lucide-vue-next'
 import { chatAPI, driveAPI } from '../services/api'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
@@ -159,13 +173,15 @@ const showClearConfirm = ref(false)
 const messagesContainer = ref(null)
 const hasIndexedFiles = ref(true) // TODO: Check actual indexing status from backend
 const currentTopK = ref(5)
+const isResponseDelayed = ref(false)
+let thinkingTimeout = null
 
 const CHAT_HISTORY_KEY = 'chat_history_v1'
 
 const exampleQuestions = [
-  'What is the main topic?',
-  'Summarize the key points',
-  'What are the next steps?'
+  { text: 'Analyse ces documents pour en extraire les points clés', icon: MessageSquare },
+  { text: 'Rédige un mail de synthèse pour mon équipe', icon: Mail },
+  { text: 'Compare les performances du dernier trimestre', icon: Sliders }
 ]
 
 marked.setOptions({
@@ -194,14 +210,16 @@ const scrollToBottom = async () => {
   }
 }
 
-const openSource = async (path) => {
+const openSource = async (source) => {
   try {
-    // Attempt to open the file based on the path/name. 
-    // Usually driveAPI.openFile expects an ID, but we only have path here.
-    // If we only have path, we might need a different API or just show it.
-    // Assuming driveAPI has a method or we alert for now.
-    console.log("Opening source:", path)
-    // Placeholder for actual file open logic since we don't have the ID
+    if (source.file_id) {
+      const response = await driveAPI.openFile(source.file_id)
+      if (response && response.url) {
+        window.open(response.url, '_blank')
+      }
+    } else {
+      console.warn("No file_id available for source:", source)
+    }
   } catch (error) {
     console.error('Error opening source:', error)
   }
@@ -247,6 +265,10 @@ const loadChatHistory = () => {
 const sendMessage = async (message = null) => {
   const text = message || inputMessage.value.trim()
   if (!text || isWaiting.value) return
+  
+  // Clear any previous thinking timeout
+  if (thinkingTimeout) clearTimeout(thinkingTimeout)
+  isResponseDelayed.value = false
 
   const timestamp = new Date().toISOString()
 
@@ -266,6 +288,11 @@ const sendMessage = async (message = null) => {
 
   inputMessage.value = ''
   isWaiting.value = true
+  
+  // Start a small delay before showing thinking dots to avoid flickering
+  thinkingTimeout = setTimeout(() => {
+    isResponseDelayed.value = true
+  }, 500)
 
   await scrollToBottom()
   saveChatHistory()
@@ -299,6 +326,8 @@ const sendMessage = async (message = null) => {
     saveChatHistory()
   } finally {
     isWaiting.value = false
+    isResponseDelayed.value = false
+    if (thinkingTimeout) clearTimeout(thinkingTimeout)
   }
 }
 
@@ -330,7 +359,7 @@ onMounted(() => {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background-color: var(--color-background);
+  background-color: #F9FAFB;
 }
 
 .warning-banner {
@@ -361,83 +390,138 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100%;
-  gap: 40px;
-  max-width: 600px;
+  flex: 1;
+  padding: 40px 20px;
+  width: 100%;
+  max-width: 1000px;
   margin: 0 auto;
 }
 
-.welcome-container {
-  padding: 40px;
-  border-radius: var(--radius-lg);
+.hero-section {
   text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--spacing-lg);
-  width: 100%;
+  margin-bottom: 48px;
 }
 
-.welcome-icon {
-  width: 64px;
-  height: 64px;
-  background: var(--color-primary);
+.salutation {
+  font-size: 36px;
+  font-weight: 700;
+  color: #1F2937;
+  margin-bottom: 8px;
+}
+
+.main-question {
+  font-size: 36px;
+  font-weight: 800;
+  color: #1F2937;
+  margin-bottom: 16px;
+  line-height: 1.2;
+}
+
+.instruction-text {
+  font-size: 14px;
+  color: #6B7280;
+  font-weight: 400;
+}
+
+.suggestions-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  width: 100%;
+  max-width: 860px; /* Narrower than input for visual balance */
+  margin-bottom: 40px;
+}
+
+.suggestion-card {
+  background: white;
+  border: 1px solid #E5E7EB;
+  border-radius: 14px;
+  padding: 20px;
+  height: 140px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  text-align: left;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+
+.suggestion-card:hover {
+  border-color: #D1D5DB;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.suggestion-text {
+  font-size: 15px;
+  font-weight: 500;
+  color: #374151;
+  line-height: 1.4;
+}
+
+.suggestion-icon {
+  color: #9CA3AF;
+  display: flex;
+  align-items: center;
+}
+
+.central-input-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.main-input-bar {
+  background: white;
+  border: 1px solid #E5E7EB;
+  border-radius: 40px;
+  padding: 8px 10px 8px 30px;
+  width: 100%;
+  max-width: 960px; /* Wider than the suggestions grid */
+  display: flex;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+}
+
+.main-input-bar input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 12px 0;
+  font-size: 16px;
+  color: #1F2937;
+  outline: none;
+}
+
+.main-input-bar input::placeholder {
+  color: #D1D5DB;
+  font-weight: 300;
+}
+
+.send-btn-circle {
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
+  background: #7C3AED; /* Vibrant Violet */
+  color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+  transition: all 0.2s ease;
+  padding: 0;
+  flex-shrink: 0;
 }
 
-.welcome-message h2 {
-  font-size: 28px;
-  margin-bottom: 12px;
+.send-btn-circle:hover:not(:disabled) {
+  background: #6D28D9;
+  transform: scale(1.05);
 }
 
-.welcome-message p {
-  color: var(--color-text-secondary);
-  font-size: 15px;
-  line-height: 1.6;
-}
-
-.suggestions-container {
-  width: 100%;
-}
-
-.suggestions-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 16px;
-  text-align: center;
-}
-
-.example-chips {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-}
-
-.chip {
-  padding: 14px 20px;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 14px;
-  color: var(--color-text-primary);
-  text-align: left;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.chip:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: var(--color-primary-light);
-  transform: translateY(-2px);
+.send-btn-circle:disabled {
+  opacity: 0.5;
+  background: #E5E7EB;
+  color: #9CA3AF;
 }
 
 .message-wrapper {
@@ -629,85 +713,61 @@ onMounted(() => {
   40% { transform: translateY(-4px); opacity: 1; }
 }
 
-.input-area {
-  padding: var(--spacing-lg);
-  border-top: 1px solid var(--color-border);
+.input-area-floating {
+  padding: 24px;
+  background: linear-gradient(to top, #F9FAFB 70%, transparent);
   flex-shrink: 0;
   z-index: 10;
+  width: 100%;
 }
 
-.input-wrapper {
-  max-width: 800px;
-  margin: 0 auto;
+.input-upper-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+  width: 100%;
 }
 
-.input-container {
+.clear-btn-visible {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 8px 8px 20px;
-  border-radius: var(--radius-lg);
-}
-
-.input-container input {
-  flex: 1;
+  gap: 6px;
   background: transparent;
   border: none;
-  font-size: 15px;
-  color: var(--color-text-primary);
-  padding: 8px 0;
-}
-
-.input-container input:focus { box-shadow: none; }
-
-.input-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.action-icon-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-muted);
-  background: transparent;
-  border: none;
+  color: #9CA3AF;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: all 0.2s;
   cursor: pointer;
+}
+
+.clear-btn-visible:hover:not(:disabled) {
+  color: #EF4444;
+  background: #FEF2F2;
+}
+
+.clear-btn-visible span {
+  opacity: 0;
+  transform: translateX(4px);
   transition: all 0.2s;
 }
 
-.action-icon-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--color-text-primary);
+.clear-btn-visible:hover span {
+  opacity: 1;
+  transform: translateX(0);
 }
 
-.send-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+.input-area-floating .main-input-bar {
+  max-width: 100%;
+}
+
+.thinking-dots {
   display: flex;
+  gap: 4px;
+  padding: 8px 0;
   align-items: center;
-  justify-content: center;
-  background: var(--color-surface-hover);
-  color: var(--color-text-muted);
-  border: none;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.send-btn.active {
-  background: var(--color-primary);
-  color: white;
-  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
-}
-
-.send-btn.active:hover {
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
 }
 
 /* Modal */
