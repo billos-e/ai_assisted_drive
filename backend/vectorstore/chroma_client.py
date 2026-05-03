@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import chromadb
 
-from ..config import Settings
-from .embedder import GeminiEmbedder
+from config import Settings
+from vectorstore.embedder import GeminiEmbedder
 
 
 class ChromaRepository:

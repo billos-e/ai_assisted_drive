@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..chat.groq_client import GroqClient
-from ..config import Settings
-from .audio_video import extract_audio_video_bytes
-from .docx import extract_docx_bytes
-from .pdf import extract_pdf_bytes
-from .pptx import extract_pptx_bytes
-from .spreadsheet import extract_spreadsheet_bytes
-from .text import extract_text_bytes
+from chat.groq_client import GroqClient
+from config import Settings
+from extraction.audio_video import extract_audio_video_bytes
+from extraction.docx import extract_docx_bytes
+from extraction.pdf import extract_pdf_bytes
+from extraction.pptx import extract_pptx_bytes
+from extraction.spreadsheet import extract_spreadsheet_bytes
+from extraction.text import extract_text_bytes
 
 
 class TextExtractor:

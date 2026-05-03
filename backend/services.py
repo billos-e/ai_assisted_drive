@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .chat.groq_client import GroqClient
-from .config import Settings
-from .drive.client import DriveClient
-from .extraction.dispatcher import TextExtractor
-from .vectorstore.chroma_client import ChromaRepository
-from .vectorstore.embedder import GeminiEmbedder
-from .vectorstore.indexer import RepositoryIndexer
+from chat.groq_client import GroqClient
+from config import Settings
+from drive.client import DriveClient
+from extraction.dispatcher import TextExtractor
+from vectorstore.chroma_client import ChromaRepository
+from vectorstore.embedder import GeminiEmbedder
+from vectorstore.indexer import RepositoryIndexer
 
 
 @dataclass(slots=True)

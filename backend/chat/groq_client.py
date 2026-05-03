@@ -4,8 +4,8 @@ from collections.abc import Iterable
 
 from groq import Groq
 
-from ..config import Settings
-from ..schemas import ChatMessage
+from config import Settings
+from schemas import ChatMessage
 
 
 class GroqClient:
@@ -48,13 +48,24 @@ class GroqClient:
         history: list[ChatMessage],
     ) -> list[dict[str, str]]:
         context_text = self._format_context(context_chunks)
+        language_map = {
+            "en": "anglais",
+            "fr": "français",
+            "es": "espagnol",
+            "de": "allemand"
+        }
+        target_lang = language_map.get(self._settings.response_language)
+        if target_lang:
+            language_instruction = f"Réponds impérativement en {target_lang}."
+        else:
+            language_instruction = "Réponds dans la langue de l'utilisateur."
+
         messages: list[dict[str, str]] = [
             {
                 "role": "system",
                 "content": (
                     "Tu es un assistant documentaire. Réponds uniquement à partir du contexte fourni. "
-                    "Si le contexte ne suffit pas, dis-le clairement. Réponds dans la langue de l'utilisateur, "
-                    "en français ou en anglais selon la question."
+                    f"Si le contexte ne suffit pas, dis-le clairement. {language_instruction}"
                 ),
             }
         ]

@@ -12,7 +12,7 @@ from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
 
-from ..config import Settings
+from config import Settings
 
 
 @dataclass(slots=True)
@@ -36,6 +36,13 @@ class DriveClient:
         if not credentials.valid and credentials.refresh_token:
             credentials.refresh(Request())
         self._service = build("drive", "v3", credentials=credentials, cache_discovery=False)
+
+    def get_user_email(self) -> str:
+        try:
+            about = self._service.about().get(fields="user(emailAddress)").execute()
+            return about.get("user", {}).get("emailAddress", "unknown")
+        except Exception:
+            return "connected"
 
     def list_folder(self, folder_id: str | None = None) -> list[DriveNode]:
         parent_id = folder_id or self._settings.google_drive_root_folder_id
@@ -183,6 +190,58 @@ class DriveClient:
         if not parent:
             return f"/{name}"
         return f"{parent}/{name}"
+
+    def delete_file(self, file_id: str) -> None:
+        """
+        Delete a file or folder from Google Drive.
+
+        Args:
+            file_id: The ID of the file or folder to delete.
+
+        Raises:
+            ValueError: If the file_id is not provided.
+            Exception: If the deletion fails due to API errors.
+        """
+        if not file_id:
+            raise ValueError("file_id cannot be empty")
+        
+        try:
+            self._service.files().delete(
+                fileId=file_id,
+                supportsAllDrives=True,
+            ).execute()
+        except Exception as e:
+            raise Exception(f"Failed to delete file {file_id}: {str(e)}")
+
+    def get_file_url(self, file_id: str) -> str:
+        """
+        Get the Google Drive web view URL for a file.
+
+        Args:
+            file_id: The ID of the file.
+
+        Returns:
+            The Google Drive URL for the file.
+
+        Raises:
+            ValueError: If the file_id is not provided.
+            Exception: If fetching metadata fails due to API errors.
+        """
+        if not file_id:
+            raise ValueError("file_id cannot be empty")
+        
+        try:
+            metadata = self._service.files().get(
+                fileId=file_id,
+                fields="webViewLink",
+                supportsAllDrives=True,
+            ).execute()
+            url = metadata.get("webViewLink")
+            if not url:
+                raise ValueError(f"Could not retrieve URL for file {file_id}")
+            return url
+        except Exception as e:
+            raise Exception(f"Failed to get file URL for {file_id}: {str(e)}")
 
     @staticmethod
     def _export_mime_type(mime_type: str) -> str | None:

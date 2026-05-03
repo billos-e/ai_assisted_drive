@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from ..chat.groq_client import GroqClient
+from chat.groq_client import GroqClient
 
 
 def extract_audio_video_bytes(content: bytes, filename: str, mime_type: str, groq_client: GroqClient) -> str:

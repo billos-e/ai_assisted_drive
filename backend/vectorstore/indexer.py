@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..config import Settings
-from .chroma_client import ChromaRepository
-from .embedder import GeminiEmbedder
+from config import Settings
+from vectorstore.chroma_client import ChromaRepository
+from vectorstore.embedder import GeminiEmbedder
 
 
 @dataclass(slots=True)
@@ -13,6 +13,7 @@ class RetrievedChunk:
     file_id: str
     file_name: str
     folder_path: str
+    source_path: str
     chunk_index: int
     distance: float | None = None
 
@@ -56,6 +57,9 @@ class RepositoryIndexer:
         if not chunks:
             return 0
 
+        # Normalize source_path: folder_path + file_name
+        source_path = self._normalize_path(folder_path, file_name)
+
         embeddings = [self._embedder.embed_document(chunk) for chunk in chunks]
         ids = [f"{file_id}:{chunk_index}" for chunk_index in range(len(chunks))]
         metadatas = [
@@ -63,6 +67,7 @@ class RepositoryIndexer:
                 "drive_file_id": file_id,
                 "file_name": file_name,
                 "folder_path": folder_path,
+                "source_path": source_path,
                 "chunk_index": chunk_index,
                 "mime_type": mime_type,
             }
@@ -86,6 +91,35 @@ class RepositoryIndexer:
                     file_ids.add(str(file_id))
         return file_ids
 
+    def delete_file_chunks(self, file_id: str) -> int:
+        """Delete all indexed chunks for a given Drive file ID.
+
+        Returns the number of chunks removed.
+        """
+        if not file_id:
+            return 0
+
+        result = self._vectorstore.collection.get(
+            where={"drive_file_id": file_id},
+            include=[],
+        )
+        ids = result.get("ids") or []
+        if not ids:
+            return 0
+
+        self._vectorstore.collection.delete(ids=ids)
+        return len(ids)
+
+    def delete_files_chunks(self, file_ids: set[str]) -> int:
+        """Delete all indexed chunks for multiple Drive file IDs.
+
+        Returns the total number of removed chunks.
+        """
+        total_deleted = 0
+        for file_id in file_ids:
+            total_deleted += self.delete_file_chunks(file_id)
+        return total_deleted
+
     def search(self, query: str, top_k: int) -> list[dict[str, str]]:
         embedding = self._embedder.embed_query(query)
         result = self._vectorstore.collection.query(
@@ -107,8 +141,22 @@ class RepositoryIndexer:
                     "file_id": str(metadata.get("drive_file_id", "")),
                     "file_name": str(metadata.get("file_name", "")),
                     "folder_path": str(metadata.get("folder_path", "")),
+                    "source_path": str(metadata.get("source_path", "")),
                     "chunk_index": str(metadata.get("chunk_index", "")),
-                    "distance": str(distance),
+                    "distance": float(distance),
                 }
             )
         return chunks
+
+    @staticmethod
+    def _normalize_path(folder_path: str, file_name: str) -> str:
+        """Normalize source_path by combining folder_path and file_name."""
+        parts = []
+        if folder_path:
+            # Clean up folder path: remove leading/trailing slashes and split
+            cleaned = folder_path.strip("/").strip()
+            if cleaned:
+                parts.append(cleaned)
+        if file_name:
+            parts.append(file_name.strip())
+        return "/".join(parts) if parts else file_name.strip()
