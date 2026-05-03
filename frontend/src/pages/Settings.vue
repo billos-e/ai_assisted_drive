@@ -25,10 +25,10 @@
           </div>
           
           <div class="setting-actions">
-            <button class="btn btn-primary" @click="reconnect" :disabled="reconnecting">
-              <RotateCcw v-if="!reconnecting" :size="14" />
-              <LoaderCircle v-else :size="14" class="spin" />
-              <span>{{ reconnecting ? 'Reconnecting...' : 'Reconnect Account' }}</span>
+            <button class="btn btn-primary" disabled title="Coming soon">
+              <RotateCcw :size="14" />
+              <span>Reconnect Account</span>
+              <span class="badge coming-soon">Soon</span>
             </button>
             <button class="btn btn-secondary" disabled title="Coming soon">
               <span>Change account</span>
@@ -127,7 +127,7 @@
               <div class="setting-hint">Choose the AI model for generating responses</div>
             </div>
             <div class="select-wrapper">
-              <select v-model="selectedModel" class="setting-select">
+              <select v-model="selectedModel" @change="updateModel" class="setting-select">
                 <option value="llama-3.3-70b-versatile">Llama 3.3 70B (Versatile)</option>
                 <option value="llama-3.1-70b-versatile">Llama 3.1 70B (Legacy)</option>
                 <option value="mixtral-8x7b-32768">Mixtral 8x7B (MoE)</option>
@@ -145,6 +145,7 @@
             <div class="number-input-wrapper">
               <input
                 v-model.number="numberOfSources"
+                @change="updateSources"
                 type="number"
                 min="1"
                 max="20"
@@ -160,7 +161,7 @@
               <div class="setting-hint">Target language for the AI responses</div>
             </div>
             <div class="select-wrapper">
-              <select v-model="responseLanguage" class="setting-select">
+              <select v-model="responseLanguage" @change="updateLanguage" class="setting-select">
                 <option value="auto">Auto-detect</option>
                 <option value="en">English</option>
                 <option value="fr">Français</option>
@@ -182,7 +183,8 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { settingsAPI } from '../services/api'
 import { 
   Link as LinkIcon, 
   RotateCcw, 
@@ -233,7 +235,7 @@ const saveRootFolder = async () => {
   if (!newRootFolderId.value.trim()) return
   savingRootFolder.value = true
   try {
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    await settingsAPI.updateSettings({ root_folder_id: newRootFolderId.value })
     rootFolderId.value = newRootFolderId.value
     editingRootFolder.value = false
   } catch (error) {
@@ -248,8 +250,9 @@ const forceReindex = async () => {
   reindexMessage.value = ''
   reindexStatus.value = ''
   try {
+    // We could call an actual re-index endpoint here if it exists
     await new Promise(resolve => setTimeout(resolve, 3000))
-    indexedFilesCount.value = 42
+    await fetchSettings()
     reindexMessage.value = 'Re-indexing completed successfully'
     reindexStatus.value = 'success'
     setTimeout(() => {
@@ -263,6 +266,48 @@ const forceReindex = async () => {
     reindexing.value = false
   }
 }
+
+const fetchSettings = async () => {
+  try {
+    const data = await settingsAPI.getSettings()
+    googleAccount.value = data.google_account
+    rootFolderId.value = data.root_folder_id
+    indexedFilesCount.value = data.indexed_files_count
+    selectedModel.value = data.selected_model
+    numberOfSources.value = data.number_of_sources
+    responseLanguage.value = data.response_language
+  } catch (error) {
+    console.error('Error fetching settings:', error)
+  }
+}
+
+const updateModel = async () => {
+  try {
+    await settingsAPI.updateSettings({ selected_model: selectedModel.value })
+  } catch (error) {
+    console.error('Error updating model:', error)
+  }
+}
+
+const updateSources = async () => {
+  try {
+    await settingsAPI.updateSettings({ number_of_sources: numberOfSources.value })
+  } catch (error) {
+    console.error('Error updating sources:', error)
+  }
+}
+
+const updateLanguage = async () => {
+  try {
+    await settingsAPI.updateSettings({ response_language: responseLanguage.value })
+  } catch (error) {
+    console.error('Error updating language:', error)
+  }
+}
+
+onMounted(() => {
+  fetchSettings()
+})
 </script>
 
 <style scoped>
@@ -435,6 +480,18 @@ const forceReindex = async () => {
   display: flex;
   gap: 12px;
   padding-top: 8px;
+}
+
+.badge.coming-soon {
+  opacity: 0;
+  transform: translateX(-5px);
+  transition: all 0.2s ease;
+  pointer-events: none;
+}
+
+button:hover .badge.coming-soon {
+  opacity: 1;
+  transform: translateX(0);
 }
 
 .inline-edit-box {

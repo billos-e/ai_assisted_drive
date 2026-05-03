@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
 from config import Settings, get_settings
-from schemas import ChatStreamRequest, DriveFolderCreateRequest, DriveItem, DriveUploadResponse, DriveDeleteResponse, DriveOpenResponse
+from schemas import ChatStreamRequest, DriveFolderCreateRequest, DriveItem, DriveUploadResponse, DriveDeleteResponse, DriveOpenResponse, SettingsResponse, SettingsUpdate
 from services import AppServices, build_services
 from startup import sync_repository_index
 
@@ -290,6 +290,72 @@ def create_app() -> FastAPI:
             raise
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to process chat request: {str(e)}")
+
+    @app.get("/settings", response_model=SettingsResponse)
+    def get_settings_route(request: Request) -> SettingsResponse:
+        """
+        Get the application settings.
+
+        Args:
+            request: The request object.
+
+        Returns:
+            The application settings.
+        """
+        try:
+            services = get_services(request)
+            return SettingsResponse(
+                google_account=services.drive.get_user_email(),
+                root_folder_id=services.settings.google_drive_root_folder_id,
+                indexed_files_count=len(services.indexer.get_indexed_file_ids()),
+                selected_model=services.settings.groq_chat_model,
+                number_of_sources=services.settings.retrieval_top_k,
+                response_language=services.settings.response_language,
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to get settings: {str(e)}")
+
+    @app.patch("/settings", response_model=SettingsResponse)
+    def patch_settings_route(payload: SettingsUpdate, request: Request) -> SettingsResponse:
+        """
+        Update the application settings.
+
+        Args:
+            payload: The settings to update.
+            request: The request object.
+
+        Returns:
+            The updated application settings.
+        """
+        try:
+            services = get_services(request)
+            settings = services.settings
+
+            if payload.root_folder_id is not None:
+                settings.google_drive_root_folder_id = payload.root_folder_id
+            if payload.selected_model is not None:
+                settings.groq_chat_model = payload.selected_model
+            if payload.number_of_sources is not None:
+                settings.retrieval_top_k = payload.number_of_sources
+            if payload.response_language is not None:
+                settings.response_language = payload.response_language
+
+            # Rebuild services to apply changes
+            request.app.state.services = build_services(settings)
+            
+            # Re-fetch services to get the new ones
+            new_services = get_services(request)
+
+            return SettingsResponse(
+                google_account=new_services.drive.get_user_email(),
+                root_folder_id=new_services.settings.google_drive_root_folder_id,
+                indexed_files_count=len(new_services.indexer.get_indexed_file_ids()),
+                selected_model=new_services.settings.groq_chat_model,
+                number_of_sources=new_services.settings.retrieval_top_k,
+                response_language=new_services.settings.response_language,
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to update settings: {str(e)}")
 
     return app
 

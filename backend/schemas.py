@@ -53,3 +53,19 @@ class DriveDeleteResponse(BaseModel):
 
 class DriveOpenResponse(BaseModel):
     url: str
+
+
+class SettingsResponse(BaseModel):
+    google_account: str
+    root_folder_id: str
+    indexed_files_count: int
+    selected_model: str
+    number_of_sources: int
+    response_language: str
+
+
+class SettingsUpdate(BaseModel):
+    root_folder_id: str | None = None
+    selected_model: str | None = None
+    number_of_sources: int | None = None
+    response_language: str | None = None

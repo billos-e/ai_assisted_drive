@@ -37,6 +37,13 @@ class DriveClient:
             credentials.refresh(Request())
         self._service = build("drive", "v3", credentials=credentials, cache_discovery=False)
 
+    def get_user_email(self) -> str:
+        try:
+            about = self._service.about().get(fields="user(emailAddress)").execute()
+            return about.get("user", {}).get("emailAddress", "unknown")
+        except Exception:
+            return "connected"
+
     def list_folder(self, folder_id: str | None = None) -> list[DriveNode]:
         parent_id = folder_id or self._settings.google_drive_root_folder_id
         query = f"'{parent_id}' in parents and trashed = false"

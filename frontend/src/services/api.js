@@ -194,8 +194,38 @@ export const healthAPI = {
   }
 }
 
+export const settingsAPI = {
+  /**
+   * Get application settings
+   * @returns {Promise}
+   */
+  async getSettings() {
+    try {
+      const response = await apiClient.get('/settings')
+      return response.data
+    } catch (error) {
+      throw error
+    }
+  },
+
+  /**
+   * Update application settings
+   * @param {Object} payload - Settings to update
+   * @returns {Promise}
+   */
+  async updateSettings(payload) {
+    try {
+      const response = await apiClient.patch('/settings', payload)
+      return response.data
+    } catch (error) {
+      throw error
+    }
+  }
+}
+
 export default {
   driveAPI,
   chatAPI,
-  healthAPI
+  healthAPI,
+  settingsAPI
 }
