@@ -1,10 +1,14 @@
 :root {
   /* Core Colors - Pro Enterprise Palette */
   --color-primary: #4F46E5;
+  --color-primary-dark: #3730A3;
+  --color-primary-light: #6366F1;
   --color-primary-pale: #EEF2FF;
   
   --color-background: #F8F9FB;
   --color-surface: #FFFFFF;
+  --color-surface-hover: #F9FAFB;
+  --color-border-hover: #E5E7EB;
   
   --color-text-primary: #1F2937;
   --color-text-secondary: #6B7280;
@@ -91,6 +95,11 @@ button {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  opacity: 1;
+}
+
+button:hover:not(:disabled) {
+  opacity: 0.4;
 }
 
 button:disabled {

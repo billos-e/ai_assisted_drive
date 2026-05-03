@@ -54,7 +54,7 @@
               <div class="setting-hint">Files in this folder will be indexed for the AI</div>
             </div>
             <div class="setting-value-group">
-              <div class="setting-value-pill">{{ rootFolderId }}</div>
+              <div class="setting-value-pill" :title="rootFolderId">{{ rootFolderId }}</div>
               <button class="btn-icon" @click="editRootFolder" title="Edit folder">
                 <Edit3 :size="16" />
               </button>
@@ -162,7 +162,6 @@
             </div>
             <div class="select-wrapper">
               <select v-model="responseLanguage" @change="updateLanguage" class="setting-select">
-                <option value="auto">Auto-detect</option>
                 <option value="en">English</option>
                 <option value="fr">Français</option>
                 <option value="es">Español</option>
@@ -172,7 +171,7 @@
             </div>
           </div>
           
-          <div class="ui-only-badge">
+          <div v-if="!isBackendConnected" class="ui-only-badge">
             <Info :size="14" />
             <span>AI model settings are currently UI-only and will be connected soon.</span>
           </div>
@@ -204,7 +203,8 @@ const rootFolderId = ref('root-folder-id-123')
 const indexedFilesCount = ref(42)
 const selectedModel = ref('llama-3.3-70b-versatile')
 const numberOfSources = ref(5)
-const responseLanguage = ref('auto')
+const responseLanguage = ref('fr')
+const isBackendConnected = ref(false)
 
 const reconnecting = ref(false)
 const editingRootFolder = ref(false)
@@ -275,7 +275,8 @@ const fetchSettings = async () => {
     indexedFilesCount.value = data.indexed_files_count
     selectedModel.value = data.selected_model
     numberOfSources.value = data.number_of_sources
-    responseLanguage.value = data.response_language
+    responseLanguage.value = data.response_language === 'auto' ? 'fr' : data.response_language
+    isBackendConnected.value = true
   } catch (error) {
     console.error('Error fetching settings:', error)
   }
@@ -415,11 +416,17 @@ onMounted(() => {
 
 .setting-value-pill {
   padding: 6px 16px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-background);
   border-radius: 20px;
   border: 1px solid var(--color-border);
-  font-size: 14px;
-  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .setting-value-pill.highlight {
@@ -510,22 +517,30 @@ button:hover .badge.coming-soon {
 }
 
 .btn-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-muted);
+  background: var(--color-primary-pale);
+  border: 1px solid rgba(79, 70, 229, 0.1);
+  color: var(--color-primary);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-icon:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--color-text-primary);
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+}
+
+.btn-icon:active {
+  transform: translateY(0);
 }
 
 .status-banner {

@@ -492,6 +492,7 @@ onMounted(() => {
   font-size: 16px;
   color: #1F2937;
   outline: none;
+  box-shadow: none !important;
 }
 
 .main-input-bar input::placeholder {
@@ -701,7 +702,7 @@ onMounted(() => {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background-color: var(--color-primary-light);
+  background-color: var(--color-primary);
   animation: bounce 1.4s infinite;
 }
 

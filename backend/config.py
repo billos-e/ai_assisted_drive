@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     retrieval_top_k: int = 5
     sources_max_distance: float = 0.3
     sources_max_count: int = 3
-    response_language: str = "auto"
+    response_language: str = "fr"
 
     @property
     def max_upload_size_bytes(self) -> int:

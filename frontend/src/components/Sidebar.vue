@@ -22,33 +22,42 @@
           </button>
 
           <button
-            class="nav-item"
+            class="nav-item disabled"
             :class="{ active: activeSection === 'recent' }"
-            @click="$emit('navigate', 'recent')"
-            :title="isCollapsed ? 'Recent' : ''"
+            @click.stop
+            :title="isCollapsed ? 'Recent (Soon)' : ''"
           >
-            <Clock :size="20" class="nav-icon" />
-            <span v-if="!isCollapsed" class="nav-label">Recent</span>
+            <div class="nav-item-content">
+              <Clock :size="20" class="nav-icon" />
+              <span v-if="!isCollapsed" class="nav-label">Recent</span>
+            </div>
+            <span v-if="!isCollapsed" class="badge-soon">soon</span>
           </button>
 
           <button
-            class="nav-item"
+            class="nav-item disabled"
             :class="{ active: activeSection === 'starred' }"
-            @click="$emit('navigate', 'starred')"
-            :title="isCollapsed ? 'Starred' : ''"
+            @click.stop
+            :title="isCollapsed ? 'Starred (Soon)' : ''"
           >
-            <Star :size="20" class="nav-icon" />
-            <span v-if="!isCollapsed" class="nav-label">Starred</span>
+            <div class="nav-item-content">
+              <Star :size="20" class="nav-icon" />
+              <span v-if="!isCollapsed" class="nav-label">Starred</span>
+            </div>
+            <span v-if="!isCollapsed" class="badge-soon">soon</span>
           </button>
 
           <button
-            class="nav-item"
+            class="nav-item disabled"
             :class="{ active: activeSection === 'trash' }"
-            @click="$emit('navigate', 'trash')"
-            :title="isCollapsed ? 'Trash' : ''"
+            @click.stop
+            :title="isCollapsed ? 'Trash (Soon)' : ''"
           >
-            <Trash2 :size="20" class="nav-icon" />
-            <span v-if="!isCollapsed" class="nav-label">Trash</span>
+            <div class="nav-item-content">
+              <Trash2 :size="20" class="nav-icon" />
+              <span v-if="!isCollapsed" class="nav-label">Trash</span>
+            </div>
+            <span v-if="!isCollapsed" class="badge-soon">soon</span>
           </button>
         </nav>
       </div>
@@ -193,6 +202,11 @@ defineEmits(['navigate', 'create-new', 'toggle-collapse'])
   display: flex;
   flex-direction: column;
   gap: 4px;
+  padding-left: var(--spacing-sm);
+}
+
+.sidebar.collapsed .sidebar-nav {
+  padding-left: 0;
 }
 
 .nav-item {
@@ -204,6 +218,7 @@ defineEmits(['navigate', 'create-new', 'toggle-collapse'])
   background-color: transparent;
   color: var(--color-text-secondary);
   transition: all 0.2s ease;
+  justify-content: flex-start;
   text-align: left;
   font-size: 14px;
   font-weight: 500;
@@ -215,6 +230,10 @@ defineEmits(['navigate', 'create-new', 'toggle-collapse'])
 .sidebar.collapsed .nav-item {
   justify-content: center;
   padding: 12px 0;
+}
+
+.sidebar.collapsed .nav-item .nav-icon {
+  margin: 0;
 }
 
 .nav-item:hover {
@@ -234,6 +253,40 @@ defineEmits(['navigate', 'create-new', 'toggle-collapse'])
 
 .nav-label {
   white-space: nowrap;
+}
+
+.nav-item.disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.nav-item-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: transform 0.3s ease;
+}
+
+.nav-item.disabled:hover .nav-item-content {
+  transform: translateX(-4px);
+}
+
+.badge-soon {
+  font-size: 10px;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-left: auto;
+  opacity: 0;
+  transform: translateX(10px);
+  transition: all 0.3s ease;
+}
+
+.nav-item:hover .badge-soon {
+  opacity: 1;
+  transform: translateX(0);
 }
 
 .sidebar-footer {
