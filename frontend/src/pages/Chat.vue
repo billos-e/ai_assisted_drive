@@ -4,7 +4,7 @@
     <Transition name="slide-down">
       <div v-if="!hasIndexedFiles" class="warning-banner">
         <CircleAlert :size="16" />
-        <span>No files indexed yet — go to the Repository to upload files</span>
+        <span>Aucun fichier indexé — allez dans le Répertoire pour en ajouter</span>
       </div>
     </Transition>
 
@@ -13,9 +13,9 @@
       <!-- Empty state -->
       <div v-if="messages.length === 0" class="empty-chat-state">
         <div class="hero-section">
-          <h1 class="salutation">Bienvenu !!</h1>
-          <h2 class="main-question">Quelle information cherchez vous aujourd'hui ?</h2>
-          <p class="instruction-text">Commencez avec l'une de nos requetes les plus communes ou promptez par vous même</p>
+          <h1 class="salutation">Bienvenue</h1>
+          <h2 class="main-question">Comment puis-je vous aider aujourd'hui ?</h2>
+          <p class="instruction-text">Explorez votre base de documents avec l'IA ou posez directement votre question ci-dessous.</p>
         </div>
         
         <div class="suggestions-grid">
@@ -38,7 +38,7 @@
             <input
               v-model="inputMessage"
               type="text"
-              placeholder="Dites ce dont vous avez besoin..."
+              placeholder="Posez une question sur vos documents..."
               @keyup.enter="sendMessage(inputMessage)"
               :disabled="isWaiting || !hasIndexedFiles"
             />
@@ -78,7 +78,7 @@
               
               <div v-if="message.sources && message.sources.length > 0" class="message-sources-inline">
                 <div class="source-tooltip-container">
-                  <button class="source-icon-btn" title="View sources">
+                  <button class="source-icon-btn" title="Voir les sources">
                     <LinkIcon :size="14" />
                   </button>
                   <div class="source-tooltip glass">
@@ -88,6 +88,7 @@
                       :key="`${source.source_path}-${idx}`" 
                       class="tooltip-item"
                       @click="openSource(source)"
+                      :title="'Ouvrir ' + (source.file_name || truncatePath(source.source_path))"
                     >
                       <FileText :size="12" />
                       <span>{{ source.file_name || truncatePath(source.source_path) }}</span>
@@ -121,7 +122,7 @@
           <input
             v-model="inputMessage"
             type="text"
-            placeholder="Dites ce dont vous avez besoin..."
+            placeholder="Posez une question sur vos documents..."
             @keyup.enter="sendMessage(inputMessage)"
             :disabled="isWaiting || !hasIndexedFiles"
           />
@@ -143,11 +144,11 @@
           <div class="modal-icon warning">
             <Trash2 :size="24" />
           </div>
-          <h3>Clear conversation?</h3>
-          <p>This will permanently delete the current chat history. This action cannot be undone.</p>
+          <h3>Effacer la conversation ?</h3>
+          <p>Cela supprimera définitivement l'historique de votre chat actuel. Cette action est irréversible.</p>
           <div class="modal-actions">
-            <button class="btn btn-secondary" @click="showClearConfirm = false">Cancel</button>
-            <button class="btn btn-primary danger" @click="confirmClear">Clear Chat</button>
+            <button class="btn btn-secondary" @click="showClearConfirm = false">Annuler</button>
+            <button class="btn btn-primary danger" @click="confirmClear">Effacer le chat</button>
           </div>
         </div>
       </div>
@@ -160,7 +161,7 @@ import { ref, computed, nextTick, onMounted } from 'vue'
 import { 
   CircleAlert, Trash2, Sparkles, Send, User, BookOpen, 
   FileText, RotateCcw, MessageSquare, Link as LinkIcon,
-  ArrowRight, Mail, Sliders, MessageCircle
+  ArrowRight, Search, MessageCircle
 } from 'lucide-vue-next'
 import { chatAPI, driveAPI } from '../services/api'
 import { marked } from 'marked'
@@ -179,9 +180,9 @@ let thinkingTimeout = null
 const CHAT_HISTORY_KEY = 'chat_history_v1'
 
 const exampleQuestions = [
-  { text: 'Analyse ces documents pour en extraire les points clés', icon: MessageSquare },
-  { text: 'Rédige un mail de synthèse pour mon équipe', icon: Mail },
-  { text: 'Compare les performances du dernier trimestre', icon: Sliders }
+  { text: 'Quelles sont les informations clés de mes derniers documents ?', icon: Sparkles },
+  { text: 'Aide-moi à retrouver un fichier spécifique dans mon drive', icon: Search },
+  { text: 'Peux-tu me résumer le contenu de mon dossier principal ?', icon: BookOpen }
 ]
 
 marked.setOptions({
@@ -322,7 +323,7 @@ const sendMessage = async (message = null) => {
     saveChatHistory()
   } catch (error) {
     console.error('Error sending message:', error)
-    messages.value[messages.value.length - 1].content = 'Sorry, there was an error processing your request. Please try again.'
+    messages.value[messages.value.length - 1].content = "Désolé, une erreur s'est produite lors du traitement de votre demande. Veuillez réessayer."
     saveChatHistory()
   } finally {
     isWaiting.value = false
@@ -405,14 +406,14 @@ onMounted(() => {
 .salutation {
   font-size: 36px;
   font-weight: 700;
-  color: #1F2937;
+  color: #374151;
   margin-bottom: 8px;
 }
 
 .main-question {
-  font-size: 36px;
-  font-weight: 800;
-  color: #1F2937;
+  font-size: 32px;
+  font-weight: 600;
+  color: #374151;
   margin-bottom: 16px;
   line-height: 1.2;
 }
@@ -434,23 +435,29 @@ onMounted(() => {
 
 .suggestion-card {
   background: white;
-  border: 1px solid #E5E7EB;
-  border-radius: 14px;
-  padding: 20px;
-  height: 140px;
+  border: 1px solid #F3F4F6;
+  border-radius: 20px;
+  padding: 24px;
+  height: 160px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   text-align: left;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
 }
 
 .suggestion-card:hover {
-  border-color: #D1D5DB;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  border-color: rgba(124, 58, 237, 0.3);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.suggestion-card:hover .suggestion-icon {
+  background: rgba(124, 58, 237, 0.1);
+  color: #7C3AED;
+  transform: scale(1.1);
 }
 
 .suggestion-text {
@@ -461,9 +468,15 @@ onMounted(() => {
 }
 
 .suggestion-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #F9FAFB;
   color: #9CA3AF;
   display: flex;
   align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
 }
 
 .central-input-container {
