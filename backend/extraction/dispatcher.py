@@ -10,12 +10,15 @@ from extraction.pdf import extract_pdf_bytes
 from extraction.pptx import extract_pptx_bytes
 from extraction.spreadsheet import extract_spreadsheet_bytes
 from extraction.text import extract_text_bytes
+from extraction.image import extract_image_bytes
+from google import genai
 
 
 class TextExtractor:
-    def __init__(self, settings: Settings, groq_client: GroqClient) -> None:
+    def __init__(self, settings: Settings, groq_client: GroqClient, gemini_client: genai.Client) -> None:
         self._settings = settings
         self._groq_client = groq_client
+        self._gemini_client = gemini_client
 
     def extract_bytes(self, *, content: bytes, filename: str, mime_type: str) -> str:
         extension = Path(filename).suffix.lower()
@@ -56,6 +59,17 @@ class TextExtractor:
             ".webm",
         }:
             return extract_audio_video_bytes(content, filename, mime_type, self._groq_client)
+
+        if mime_type.startswith("image/") or extension in {
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".gif",
+            ".bmp",
+            ".webp",
+            ".tiff",
+        }:
+            return extract_image_bytes(content, self._gemini_client, mime_type)
 
         if mime_type.startswith("text/") or extension in {
             ".txt",

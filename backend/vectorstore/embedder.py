@@ -6,9 +6,9 @@ from config import Settings
 
 
 class GeminiEmbedder:
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, client: genai.Client) -> None:
         self._settings = settings
-        self._client = genai.Client(api_key=settings.gemini_api_key)
+        self._client = client
 
     def _embedding_values(self, response: object) -> list[float]:
         embeddings = getattr(response, "embeddings", None)
