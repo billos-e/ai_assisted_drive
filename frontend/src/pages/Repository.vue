@@ -7,15 +7,16 @@
       </div>
 
       <div class="header-right">
-        <div class="search-bar">
+        <div class="search-bar" title="Soon">
           <Search :size="18" class="search-icon" />
-          <input type="text" placeholder="Search files..." />
+          <input type="text" placeholder="Search files..." disabled />
+          <span class="badge-soon">soon</span>
         </div>
         <button class="icon-btn">
           <Bell :size="20" />
         </button>
-        <div class="user-avatar">
-          <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="User Avatar" />
+        <div class="user-avatar-neutral">
+          <CircleUser :size="24" />
         </div>
       </div>
     </header>
@@ -108,7 +109,7 @@
 
         <div v-else class="table-body">
           <div
-            v-for="item in items"
+            v-for="item in sortedItems"
             :key="item.id"
             class="file-row"
             @click="handleItemClick(item)"
@@ -149,7 +150,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { 
   Search, 
   Bell, 
@@ -161,7 +162,8 @@ import {
   LoaderCircle, 
   Trash2,
   Check,
-  X
+  X,
+  CircleUser
 } from 'lucide-vue-next'
 import { driveAPI } from '../services/api'
 import { getFileIconComponent } from '../utils/icons'
@@ -179,6 +181,17 @@ const folderInput = ref(null)
 const showNewFolderInput = ref(false)
 const newFolderName = ref('')
 const indexingFiles = ref([])
+
+const sortedItems = computed(() => {
+  return [...items.value].sort((a, b) => {
+    // Folders first
+    if (a.type === 'folder' && b.type !== 'folder') return -1
+    if (a.type !== 'folder' && b.type === 'folder') return 1
+    
+    // Then alphabetical
+    return a.name.localeCompare(b.name)
+  })
+})
 
 const loadItems = async () => {
   loading.value = true
@@ -370,11 +383,37 @@ defineExpose({
 
 .search-bar input {
   width: 100%;
-  padding: 10px 12px 10px 40px;
+  padding: 10px 60px 10px 40px;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
   background-color: var(--color-background);
   font-size: 14px;
+}
+
+.search-bar input:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.search-bar .badge-soon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%) translateX(10px);
+  font-size: 10px;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  opacity: 0;
+  transition: all 0.3s ease;
+  pointer-events: none;
+}
+
+.search-bar:hover .badge-soon {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
 }
 
 .icon-btn {
@@ -391,18 +430,22 @@ defineExpose({
   background-color: var(--color-background);
 }
 
-.user-avatar {
+.user-avatar-neutral {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  overflow: hidden;
-  border: 2px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-background);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  transition: all 0.2s ease;
 }
 
-.user-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.user-avatar-neutral:hover {
+  border-color: var(--color-primary-light);
+  color: var(--color-primary);
 }
 
 .repository-content {

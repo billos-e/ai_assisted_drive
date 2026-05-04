@@ -62,7 +62,7 @@
           :class="message.role"
         >
           <div class="avatar-small" :class="message.role">
-            <User v-if="message.role === 'user'" :size="14" />
+            <CircleUser v-if="message.role === 'user'" :size="14" />
             <Sparkles v-else :size="14" />
           </div>
           
@@ -159,7 +159,7 @@
 <script setup>
 import { ref, computed, nextTick, onMounted } from 'vue'
 import { 
-  CircleAlert, Trash2, Sparkles, Send, User, BookOpen, 
+  CircleAlert, Trash2, Sparkles, Send, CircleUser, BookOpen, 
   FileText, RotateCcw, MessageSquare, Link as LinkIcon,
   ArrowRight, Search, MessageCircle
 } from 'lucide-vue-next'
