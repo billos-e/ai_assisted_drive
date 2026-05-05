@@ -93,7 +93,7 @@ def sync_repository_index(services: AppServices) -> None:
         extracted_text = services.extractor.extract_bytes(content=content, filename=node.name, mime_type=node.mime_type)
         if not extracted_text.strip():
             indexed_file_ids.add(node.id)
-            continue
+            continue 
 
         services.indexer.index_text(
             file_id=node.id,
